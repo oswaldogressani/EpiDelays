@@ -1,6 +1,5 @@
-# The EpiDelays package #
 
-### Version 0.0.1 ### 
+## Version 0.0.1  
 
 * Release of first package version on GitHub. 
 * Version name: "EpiDelays is born".

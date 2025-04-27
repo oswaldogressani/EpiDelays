@@ -1,4 +1,4 @@
-EpiDelays: a tool for estimating epidemiological delays
+EpiDelays: A Software for Estimation of Epidemiological Delays
 ================
 Oswaldo Gressani (<oswaldo.gressani@uhasselt.be>)
 
@@ -15,7 +15,8 @@ of Gressani and Hens (2024).
 
 #### Package version
 
-This is version 0.0.1 (2025-04-22) - “EpiDelays is born”.
+This is version 0.0.1 - 2025-04-22 (April 22, 2025) - “EpiDelays is
+born”.
 
 #### Acknowledgments
 
