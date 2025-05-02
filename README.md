@@ -16,7 +16,7 @@ of Gressani and Hens (2024).
 #### Package version
 
 This is version 0.0.1 - 2025-04-22 (April 22, 2025) - “EpiDelays is
-born”.
+born”.<br> Public release date: 2025-05-02 (May 2, 2025)
 
 #### Acknowledgments
 

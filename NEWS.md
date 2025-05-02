@@ -4,6 +4,7 @@
 * Release of first package version on GitHub. 
 * Version name: "EpiDelays is born".
 * Release date: 2025-04-22 (April 22, 2025)
+* Public release date: 2025-05-02 (May 2, 2025)
 
 
 
