@@ -2,21 +2,35 @@ EpiDelays: A Software for Estimation of Epidemiological Delays
 ================
 Oswaldo Gressani (<oswaldo.gressani@uhasselt.be>)
 
-**EpiDelays** is a package that can be used for estimation of
-epidemiological delays. It is currently under development and contains
-routines for nonparametric serial interval estimation based on the work
-of Gressani and Hens (2024).
+**EpiDelays** is a package that can be used to fit epidemiological delay
+distributions to interval-censored data. The `parfitml` routine can be
+used to fit classic delay distributions (`gamma`, `lognormal`,
+`weibull`, `gaussian`) via maximum likelihood. The `nonparfit` routine
+uses the nonparametric methodology developed by Gressani and Hens (2025)
+to obtain estimates of key epidemiological delay features without
+imposing any parametric assumptions. For both routines, the
+nonparametric bootstrap can be implemented to compute standard errors
+and confidence intervals for often reported epidemiological delay
+features.
+
+This package is currently under construction and additional features
+will be added in future releases.
 
 #### Associated literature
 
-1.  Gressani, O. and Hens, N. (2024). Nonparametric serial interval
-    estimation. MedRxiv preprint.
-    <https://doi.org/10.1101/2024.10.16.24315600>
+1.  Gressani, O. and Hens, N. (2025). Nonparametric serial interval
+    estimation with uniform mixtures. *PLoS Computational Biology*,
+    **21**(8):e1013338. <https://doi.org/10.1371/journal.pcbi.1013338>
 
 #### Package version
 
-This is version 0.0.1 - 2025-04-22 (April 22, 2025) - “EpiDelays is
-born”.<br> Public release date: 2025-05-02 (May 2, 2025)
+This is version 0.0.2 - “Parametric wave 1”.<br> Release date:
+2025-12-14 (December 14, 2025).
+
+#### Authors and contributors
+
+1.  Oswaldo Gressani (author, maintainer) <br>
+2.  Dongxuan Chen (contributor)
 
 #### Acknowledgments
 
@@ -32,4 +46,4 @@ programme.
 
 #### License
 
-Copyright (C) 2025 Oswaldo Gressani. All rights reserved.
+Copyright (C) 2025-2026 Oswaldo Gressani. All rights reserved.
