@@ -4,3 +4,8 @@
 ^_pkgdown\.yml$
 ^docs$
 ^pkgdown$
+^primarycensored$
+^CLAUDE\.md$
+^\.github$
+^\.lintr$
+^\.claude$

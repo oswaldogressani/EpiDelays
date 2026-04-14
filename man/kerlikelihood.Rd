@@ -4,7 +4,15 @@
 \alias{kerlikelihood}
 \title{Likelihood function for single and doubly interval-censored data}
 \usage{
-kerlikelihood(x, family, likapprox = "ni")
+kerlikelihood(
+  x,
+  family,
+  likapprox = "ni",
+  L = 0,
+  D = Inf,
+  dprimary = stats::dunif,
+  dprimary_args = list()
+)
 }
 \arguments{
 \item{x}{A data frame with either two columns named \code{xl} and \code{xr},
@@ -15,15 +23,42 @@ description for constraints imposed on the columns.}
 family.}
 
 \item{likapprox}{Approximation of the likelihood function in case of doubly
-interval-censored data. Default is \code{"ni"} for numerical integration.
-Another possibility is \code{"mc"} for crude Monte Carlo sampling with 1000
-samples.}
+interval-censored data. Default is \code{"ni"}, which delegates evaluation
+to \code{primarycensored::dprimarycensored()}. Another possibility is
+\code{"mc"} for crude Monte Carlo sampling with 1000 samples.}
+
+\item{L}{Lower truncation point applied to the underlying delay
+distribution. Defaults to \code{0}. When \code{L > 0} the per-row
+contribution is rescaled by the truncated CDF.}
+
+\item{D}{Upper truncation point applied to the underlying delay
+distribution. Defaults to \code{Inf}. Together with \code{L}, rows whose
+observed interval is incompatible with \code{[L, D]} are rejected at
+input time.}
+
+\item{dprimary}{Primary event density function. Used only when \code{x} has
+four columns (doubly interval-censored data) and \code{likapprox = "ni"}.
+Must take a vector \code{x} and the arguments \code{min} and \code{max},
+return a density normalised to integrate to 1 on \code{[min, max]}, and be
+compatible with \code{primarycensored::dprimarycensored()}. Defaults to
+\code{stats::dunif} (uniform primary onset within the observation window),
+which reproduces the behaviour of earlier EpiDelays versions. Non-uniform
+choices include \code{primarycensored::dexpgrowth} for exponential growth
+during an outbreak. Ignored when \code{x} has two columns (single
+interval-censored data) but must equal the default in that case.}
+
+\item{dprimary_args}{A named list of additional arguments passed to
+\code{dprimary}, mirroring the \code{dprimary_args} argument of
+\code{primarycensored::dprimarycensored()}. Example: \code{list(r = 0.1)}
+for \code{primarycensored::dexpgrowth}. Defaults to an empty list. Must be
+empty unless \code{x} has four columns and \code{likapprox = "ni"}.}
 }
 \value{
 A list containing information on the chosen parametric family,
 the log-likelihood function, a function that transforms back the parameters
-in their original scale, the censoring type and the approximation of the
-likelihood function used in case of doubly interval-censored data.
+in their original scale, the censoring type, the approximation of the
+likelihood function used in case of doubly interval-censored data, and the
+primary event density settings.
 }
 \description{
 The likelihood function plays a key role in maximum likelihood estimation and
@@ -45,14 +80,16 @@ Moreover, \code{NA} values are not allowed in data frame \code{x}.
 Returns the log-likelihood function of parameters that have been transformed
 to live in an unbounded parameter space. This makes the
 maximization/evaluation of the likelihood function numerically more stable.
-The doubly interval-censored likelihood function requires to evaluate an
-inner integral. By default, this is implemented via numerical integration
-(ni) with \code{likapprox = "ni"}, where the integral is evaluated with the
-\code{integrate} routine. Another option is \code{likapprox = "mc"}, which
-uses crude Monte Carlo sampling to evaluate the inner integral in the
-doubly interval-censored likelihood function. Note that Monte
-Carlo sampling results in much longer computation times to evaluate the
-likelihood function. The number of Monte Carlo samples is fixed at 1000.
+The doubly interval-censored likelihood function marginalises out the
+primary event time. By default (\code{likapprox = "ni"}), this
+marginalisation is delegated to
+\code{primarycensored::dprimarycensored()}, which chooses the most
+efficient method for the given CDF and windows. Another option is
+\code{likapprox = "mc"}, which uses crude Monte Carlo sampling to evaluate
+the inner integral in the doubly interval-censored likelihood function.
+Note that Monte Carlo sampling results in much longer computation times to
+evaluate the likelihood function. The number of Monte Carlo samples is
+fixed at 1000.
 }
 \author{
 Oswaldo Gressani \email{oswaldo_gressani@hotmail.fr}

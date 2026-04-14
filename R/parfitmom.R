@@ -21,7 +21,7 @@
 #' intervals.
 #'
 #' @param x A data frame with either two columns named \code{xl} and \code{xr},
-#' or four columns named \code{x1l}, \code{x1r}, \code{x2l}, \code{x2r}. See
+#' or four columns named \code{x1l} and \code{x1r}, \code{x2l}, \code{x2r}. See
 #' description for constraints imposed on the columns.
 #' @param family A character string specifying the name of the parametric
 #' family. Can be one of the following: \code{"gaussian"}, \code{"gamma"},
@@ -29,6 +29,17 @@
 #' @param incheck Should internal checks be implemented to check that data
 #' frame \code{x} is in correct format and that \code{family} has been
 #' correctly specified by the user? Default is TRUE.
+#' @param L Lower truncation point. Accepted for signature compatibility with
+#' \code{parfitml()}; currently ignored. Under non-trivial truncation the
+#' moment estimators below are biased (sample mean and variance drift toward
+#' the centre of \code{[L, D]}), but the result is only used as an optimiser
+#' starting value, so the bias is tolerated.
+#' @param D Upper truncation point. See \code{L}.
+#' @param dprimary Ignored. Accepted for signature consistency with
+#' \code{\link{parfitml}} so the same argument set can be threaded through
+#' both routines. Moment matching assumes uniform primary onset.
+#' @param dprimary_args Ignored. Accepted for signature consistency with
+#' \code{\link{parfitml}}.
 #'
 #' @return A list containing information on the chosen parametric family and
 #' method of moments (MoM) estimates of the model parameters. The value
@@ -40,7 +51,18 @@
 #'
 #' @export
 
-parfitmom <- function(x, family, incheck = TRUE){
+parfitmom <- function(x, family, incheck = TRUE, L = 0, D = Inf,
+                      dprimary = stats::dunif, dprimary_args = list()) {
+  # L and D are accepted so parfitml() can forward them, but the moment
+  # estimators below do not correct for truncation. The resulting
+  # `mompoint_ub` is a known-biased optimiser start under non-trivial
+  # truncation; parfitml()'s optim call still converges in practice.
+  if (!is.numeric(L) || length(L) != 1L || is.na(L) || L < 0) {
+    stop("L must be a non-negative scalar.")
+  }
+  if (!is.numeric(D) || length(D) != 1L || is.na(D) || L >= D) {
+    stop("L must be less than D.")
+  }
   if(!is.logical(incheck)) {
     stop("incheck must be either TRUE or FALSE")
   } else if (isTRUE(incheck)) {
@@ -81,10 +103,27 @@ parfitmom <- function(x, family, incheck = TRUE){
                   mompoint_ub = mompoint_ub)
   } else if (family == "skewnorm") {
     rsn <- 2 * m3 / (4 - pi)
-    par2approx <- sqrt(m2 + rsn^(2 / 3))
-    dapprox <- (rsn^(1 / 3)) / (par2approx * sqrt(2 / pi))
-    par3approx <- dapprox / sqrt(1 - dapprox^2)
-    par1approx <- m1 - par2approx * dapprox * sqrt(2 / pi)
+    # Use a signed cube root so negative sample skew does not produce NaN
+    # seeds. The original `rsn^(2/3)` returns NaN for rsn < 0 in R, which
+    # propagates into v0 and crashes optim before the first likelihood
+    # evaluation.
+    cbrt <- function(z) sign(z) * abs(z)^(1 / 3)
+    rsn_13 <- cbrt(rsn)
+    rsn_23 <- rsn_13^2
+    par2approx <- sqrt(m2 + rsn_23)
+    dapprox <- rsn_13 / (par2approx * sqrt(2 / pi))
+    # Clamp |dapprox| < 1 so the slant remains finite even in small-sample
+    # cases where the moment identity pushes dapprox past the feasible
+    # boundary. The MoM estimate is only an optimiser seed.
+    dapprox_clamped <- max(min(dapprox, 0.99), -0.99)
+    par3approx <- dapprox_clamped / sqrt(1 - dapprox_clamped^2)
+    par1approx <- m1 - par2approx * dapprox_clamped * sqrt(2 / pi)
+    if (!all(is.finite(c(par1approx, par2approx, par3approx))) ||
+        par2approx <= 0) {
+      par1approx <- m1
+      par2approx <- sqrt(max(m2, 1e-6))
+      par3approx <- 0
+    }
     mompoint_ub <- c(par1approx, log(par2approx), par3approx)
     lpout <- list(par1approx = par1approx, par2approx = par2approx,
                   par3approx = par3approx, mompoint_ub = mompoint_ub)
@@ -122,12 +161,3 @@ parfitmom <- function(x, family, incheck = TRUE){
   o <- c(famdesc, lpout)
   return(o)
 }
-
-
-
-
-
-
-
-
-
