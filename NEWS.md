@@ -22,5 +22,4 @@
 * S3 methods (summary) for parfitml and nonparfit.
 * Release date: 2026-04-07 (April 7, 2026)
 
-
-
+## Version 0.0.4
