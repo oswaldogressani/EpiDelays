@@ -83,8 +83,14 @@ parfitmom <- function(x, family, incheck = TRUE){
     rsn <- 2 * m3 / (4 - pi)
     par2approx <- sqrt(m2 + rsn^(2 / 3))
     dapprox <- (rsn^(1 / 3)) / (par2approx * sqrt(2 / pi))
-    par3approx <- dapprox / sqrt(1 - dapprox^2)
-    par1approx <- m1 - par2approx * dapprox * sqrt(2 / pi)
+    if(abs(dapprox) >= 1) {
+      par1approx <- m1
+      par2approx <- sqrt(m2)
+      par3approx <- 0
+    } else{
+      par3approx <- dapprox / sqrt(1 - dapprox^2)
+      par1approx <- m1 - par2approx * dapprox * sqrt(2 / pi)
+    }
     mompoint_ub <- c(par1approx, log(par2approx), par3approx)
     lpout <- list(par1approx = par1approx, par2approx = par2approx,
                   par3approx = par3approx, mompoint_ub = mompoint_ub)

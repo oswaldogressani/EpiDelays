@@ -20,6 +20,4 @@
 * Added Skew-Normal distribution.
 * Added doubly interval-censored likelihood functions.
 * S3 methods (summary) for parfitml and nonparfit.
-* Release date: 2026-04-07 (April 7, 2026)
-
-## Version 0.0.4
+* Updated method of moments approach for skew-normal family
