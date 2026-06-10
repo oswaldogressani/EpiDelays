@@ -23,7 +23,9 @@ samples.}
 A list containing information on the chosen parametric family,
 the log-likelihood function, a function that transforms back the parameters
 in their original scale, the censoring type and the approximation of the
-likelihood function used in case of doubly interval-censored data.
+likelihood function used in case of doubly interval-censored data. It also
+returns the Jacobian of the inverse of the function that transforms a
+bounded domain to an unbounded domain.
 }
 \description{
 The likelihood function plays a key role in maximum likelihood estimation and

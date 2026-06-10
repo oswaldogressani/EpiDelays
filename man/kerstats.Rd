@@ -2,19 +2,23 @@
 % Please edit documentation in R/kerstats.R
 \name{kerstats}
 \alias{kerstats}
-\title{Computes summary statistics based on point estimates and bootstrap samples}
+\title{Computes summary statistics}
 \usage{
-kerstats(slist, pestim, boot)
+kerstats(slist, pestim, method = c("norm", "boot"), se = NULL, boot = NULL)
 }
 \arguments{
-\item{slist}{A list of bootstrap statistics.}
+\item{slist}{A list of entries for which the statistics are required.}
 
 \item{pestim}{A vector of point estimates.}
+
+\item{method}{The method with which confidence intervals are computed.}
+
+\item{se}{A vector of standard errors.}
 
 \item{boot}{Bootstraped statistics.}
 }
 \description{
-Computes summary statistics based on point estimates and bootstrap samples
+Computes summary statistics
 }
 \author{
 Oswaldo Gressani \email{oswaldo_gressani@hotmail.fr}

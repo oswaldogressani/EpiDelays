@@ -42,7 +42,9 @@
 #' @return A list containing information on the chosen parametric family,
 #' the log-likelihood function, a function that transforms back the parameters
 #' in their original scale, the censoring type and the approximation of the
-#' likelihood function used in case of doubly interval-censored data.
+#' likelihood function used in case of doubly interval-censored data. It also
+#' returns the Jacobian of the inverse of the function that transforms a
+#' bounded domain to an unbounded domain.
 #'
 #' @author Oswaldo Gressani \email{oswaldo_gressani@hotmail.fr}
 #'
@@ -129,6 +131,10 @@ kerlikelihood <- function(x, family, likapprox = "ni") {
       colnames(z) <- c(famdesc$par1, famdesc$par2)
       z
     }
+    J <- function(v) {
+      o <- diag(c(1, exp(v[2])))
+      o
+    }
   }else if (family == "skewnorm") {
     if(nc == 2) {
       loglik <- function(v, x) {
@@ -183,6 +189,10 @@ kerlikelihood <- function(x, family, likapprox = "ni") {
       colnames(z) <- c(famdesc$par1, famdesc$par2, famdesc$par3)
       z
     }
+    J <- function(v) {
+      o <- diag(c(1, exp(v[2]), 1))
+      o
+    }
   } else if (family == "gamma") {
     if(nc == 2) {
       loglik <- function(v, x) {
@@ -233,6 +243,10 @@ kerlikelihood <- function(x, family, likapprox = "ni") {
       z <- data.frame(exp(v[1]), exp(v[2]))
       colnames(z) <- c(famdesc$par1, famdesc$par2)
       z
+    }
+    J <- function(v) {
+      o <- diag(c(exp(v[1]), exp(v[2])))
+      o
     }
   } else if (family == "lognormal") {
     if(nc == 2) {
@@ -285,6 +299,10 @@ kerlikelihood <- function(x, family, likapprox = "ni") {
       colnames(z) <- c(famdesc$par1, famdesc$par2)
       z
     }
+    J <- function(v) {
+      o <- diag(c(1, exp(v[2])))
+      o
+    }
   } else if (family == "weibull") {
     if(nc == 2) {
       loglik <- function(v, x) {
@@ -336,8 +354,12 @@ kerlikelihood <- function(x, family, likapprox = "ni") {
       colnames(z) <- c(famdesc$par1, famdesc$par2)
       z
     }
+    J <- function(v) {
+      o <- diag(c(exp(v[1]), exp(v[2])))
+      o
+    }
   }
   o <- c(famdesc, list(loglik = loglik, originscale = originscale,
-           censtype = censtype, likapprox = likapprox))
+           censtype = censtype, J = J, likapprox = likapprox))
   return(o)
 }

@@ -20,4 +20,6 @@
 * Added Skew-Normal distribution.
 * Added doubly interval-censored likelihood functions.
 * S3 methods (summary) for parfitml and nonparfit.
-* Updated method of moments approach for skew-normal family
+* Updated method of moments approach for skew-normal family.
+* Added rmvnorm to simulate from a multivariate Gaussian distribution.
+* Added simulation-based ci using asymptotic normality of MLE.
