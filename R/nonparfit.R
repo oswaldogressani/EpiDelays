@@ -93,7 +93,8 @@ nonparfit <- function(x, Bboot = 1000, pgbar = TRUE){
   if(isTRUE(pgbar)) close(progbar)
   feats <- c("mean", "var", "sd", paste0("q", c(1, 5, 25, 50, 75, 95, 99)))
   delayfit <- stats::setNames(vector("list", length(feats)), feats)
-  delayfit <- kerstats(slist = delayfit, pestim = npfeat, boot = fboot)
+  delayfit <- kerstats(slist = delayfit, pestim = npfeat, method = "boot",
+                       boot = fboot)
   toc <- proc.time() - tic
   o <- list(n = n, Bboot = Bboot, delayfit = delayfit, censtype = "single",
             elapsed = toc[3])
