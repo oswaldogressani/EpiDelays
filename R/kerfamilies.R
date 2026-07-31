@@ -14,6 +14,8 @@
 kerfamilies <- function() {
   f1 <- list(
     fname = "gaussian",
+    dname = "dnorm",
+    pname = "pnorm",
     npars = 2,
     par1 = "mean",
     par2 = "sd",
@@ -21,6 +23,8 @@ kerfamilies <- function() {
   )
   f2 <- list(
     fname = "gamma",
+    dname = "dgamma",
+    pname = "pgamma",
     npars = 2,
     par1 = "shape",
     par2 = "rate",
@@ -28,6 +32,8 @@ kerfamilies <- function() {
   )
   f3 <- list(
     fname = "lognormal",
+    dname = "dlnorm",
+    pname = "plnorm",
     npars = 2,
     par1 = "location",
     par2 = "scale",
@@ -35,6 +41,8 @@ kerfamilies <- function() {
   )
   f4 <- list(
     fname = "weibull",
+    dname = "dweibull",
+    pname = "pweibull",
     npars = 2,
     par1 = "shape",
     par2 = "scale",
@@ -42,6 +50,8 @@ kerfamilies <- function() {
   )
   f5 <- list(
     fname = "skewnorm",
+    dname = "dskewnorm",
+    pname = "pskewnorm",
     npars = 3,
     par1 = "location",
     par2 = "scale",

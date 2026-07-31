@@ -11,7 +11,6 @@
 #' @author Oswaldo Gressani \email{oswaldo_gressani@hotmail.fr}
 #'
 #' @export
-
 summary.nonparfit <- function(object, ndigits = 3, ...) {
   if(!inherits(object, "nonparfit"))
     stop("object must be a nonparfit object")

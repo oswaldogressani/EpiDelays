@@ -96,8 +96,8 @@ nonparfit <- function(x, Bboot = 1000, pgbar = TRUE){
   delayfit <- kerstats(slist = delayfit, pestim = npfeat, method = "boot",
                        boot = fboot)
   toc <- proc.time() - tic
-  o <- list(n = n, Bboot = Bboot, delayfit = delayfit, censtype = "single",
-            elapsed = toc[3])
+  o <- list(x = x, n = n, Bboot = Bboot, delayfit = delayfit,
+            censtype = "single", elapsed = toc[3])
   attr(o, "class") <- "nonparfit"
   return(o)
 }

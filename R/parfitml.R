@@ -23,7 +23,7 @@
 #' distribution (mean, variance, standard deviation and selected quantiles). The
 #' nonparametric bootstrap is used to compute standard errors and confidence
 #' intervals for the model parameters and different features. Maximum likelihood
-#' estimates are computed with the \code{optim} function using the 
+#' estimates are computed with the \code{optim} function using the
 #' Nelder and Mead (1965) method. Initial parameter values are computed via a
 #' moment matching approach.
 #'
@@ -54,8 +54,8 @@
 #'
 #' @references Nelder, J. A. and Mead, R. (1965). A simplex algorithm for
 #' function minimization. \emph{Computer Journal}, \strong{7}, 308–313.
-#' 
-#' @references Mandel, M. (2013). Simulation-based confidence intervals 
+#'
+#' @references Mandel, M. (2013). Simulation-based confidence intervals
 #' for functions with complicated derivatives. \emph{The American Statistician},
 #' \strong{67}(2), 76-81.
 #'
@@ -63,17 +63,17 @@
 
 parfitml <- function(x, family, ci = c("npboot", "pboot", "sbnorm"),...){
   tic <- proc.time()
-  m <- kerlikelihood(x = x, family = family)  
+  m <- kerlikelihood(x = x, family = family)
   n <- nrow(x)
   np <- m$npars
   v0 <- parfitmom(x = x, family = family, incheck = FALSE)$mompoint_ub
   maxs <- list(fnscale = -1)
   mle <- stats::optim(par = v0, fn = m$loglik, x = x, control = maxs,
-                      hessian = TRUE) 
+                      hessian = TRUE)
   mlepar <- as.numeric(m$originscale(mle$par))
   mlefeat <- as.numeric(kerfeats(family = family, par = mlepar))
   mleconv <- (mle$convergence == 0)
-  cimethod <- match.arg(ci) 
+  cimethod <- match.arg(ci)
   parl <- stats::setNames(vector("list", np), paste0("par", 1:np))
   feats <- c("mean", "var", "sd", paste0("q", c(1, 5, 25, 50, 75, 95, 99)))
   featsl <- stats::setNames(vector("list", length(feats)), feats)
@@ -96,7 +96,7 @@ parfitml <- function(x, family, ci = c("npboot", "pboot", "sbnorm"),...){
       }
     } else{
       pgbar <- FALSE
-    } 
+    }
     pboot <- matrix(0, nrow = Bboot, ncol = np)
     fboot <- matrix(0, nrow = Bboot, ncol = length(mlefeat))
     bootdiscard <- 0
@@ -104,7 +104,7 @@ parfitml <- function(x, family, ci = c("npboot", "pboot", "sbnorm"),...){
       bootbconv <- 1
       while (bootbconv != 0) {
         xb <- kerboot(x)
-        mleboot <- stats::optim(par = mle$par, fn = m$loglik, x = xb, 
+        mleboot <- stats::optim(par = mle$par, fn = m$loglik, x = xb,
                                 control = maxs)
         if (mleboot$convergence == 0) {
           bootbconv <- 0
@@ -136,10 +136,10 @@ parfitml <- function(x, family, ci = c("npboot", "pboot", "sbnorm"),...){
     } else{
       ns <- 100
     }
-    obsFishermle <- (-mle$hessian)  
-    invobsFishermle <- chol2inv(chol(obsFishermle)) 
-    Jmle <- m$J(mle$par) 
-    sigmamle <- crossprod(Jmle, invobsFishermle %*% Jmle) 
+    obsFishermle <- (-mle$hessian)
+    invobsFishermle <- chol2inv(chol(obsFishermle))
+    Jmle <- m$J(mle$par)
+    sigmamle <- crossprod(Jmle, invobsFishermle %*% Jmle)
     semle <- sqrt(diag(sigmamle))
     psim <- rmvnorm(n = ns, mean = mlepar, sigma = sigmamle)$sim
     err2feats <- list()
@@ -156,11 +156,12 @@ parfitml <- function(x, family, ci = c("npboot", "pboot", "sbnorm"),...){
   aic <- 2 * (np - mle$value)
   bic <- np * log(n) - 2 * mle$value
   toc <- proc.time() - tic
-  
+
   o <- c(m[!names(m) %in% c("loglik", "originscale")],
          list(n = n, Bboot = Bboot, parfit = parfit, delayfit = delayfit,
-              aic = aic, bic = bic, mleconv = mleconv, 
+              aic = aic, bic = bic, mleconv = mleconv,
               bootdiscard = bootdiscard, cimethod = cimethod, ns = ns,
+              xmin = m$xmin, xmax = m$xmax,
               elapsed = toc[3]))
   attr(o, "class") <- "parfitml"
   return(o)

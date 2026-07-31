@@ -23,3 +23,4 @@
 * Updated method of moments approach for skew-normal family.
 * Added rmvnorm to simulate from a multivariate Gaussian distribution.
 * Added simulation-based ci using asymptotic normality of MLE.
+* S3 methods (plot) for parfitml and nonparfit.

@@ -21,9 +21,9 @@ summary.parfitml <- function(object, ndigits = 3, type = "full", ...) {
     stop("type must either be 'full' or 'compact'")
   }
   dfpar <- cbind(name = unlist(object[names(object$parfit)]),
-                 round(do.call(rbind, lapply(object$parfit, as.data.frame)), 
+                 round(do.call(rbind, lapply(object$parfit, as.data.frame)),
                        ndigits))
-  dfdel <- round(do.call(rbind, lapply(object$delayfit, as.data.frame)), 
+  dfdel <- round(do.call(rbind, lapply(object$delayfit, as.data.frame)),
                  ndigits)
   cimethod <- object$cimethod
   if (cimethod == "npboot") {

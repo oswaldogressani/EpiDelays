@@ -75,8 +75,12 @@ kerlikelihood <- function(x, family, likapprox = "ni") {
   if(nc == 2) {
     censtype <- "single"
     likapprox <- "None"
+    xmin <- min(x$xl)
+    xmax <- max(x$xr)
   } else if (nc == 4) {
     censtype <- "double"
+    xmin <- min(x$x2l - x$x1r)
+    xmax <- max(x$x2r - x$x1r)
     logdx1 <- log(x$x1r - x$x1l)
     M <- 1000 #  Monte carlo samples for doubly interval-censored likelihood
   }
@@ -142,8 +146,8 @@ kerlikelihood <- function(x, family, likapprox = "ni") {
         par1 <- v[1]
         par2 <- exp(v[2])
         par3 <- v[3]
-        Fl <- pskewnorm(x = x$xl, par1 = par1, par2 = par2, par3 = par3)
-        Fr <- pskewnorm(x = x$xr, par1 = par1, par2 = par2, par3 = par3)
+        Fl <- pskewnorm(q = x$xl, par1 = par1, par2 = par2, par3 = par3)
+        Fr <- pskewnorm(q = x$xr, par1 = par1, par2 = par2, par3 = par3)
         z   <- sum(log(Fr - Fl))
         z
       }
@@ -157,8 +161,8 @@ kerlikelihood <- function(x, family, likapprox = "ni") {
           z <- 0
           for(i in 1:n) {
             x1s <- stats::runif(n = M, min = x$x1l[i], max = x$x1r[i])
-            Fl <- pskewnorm(x = x$x2l[i] - x1s, par1 = par1, par2 = par2, par3 = par3)
-            Fr <- pskewnorm(x = x$x2r[i] - x1s, par1 = par1, par2 = par2, par3 = par3)
+            Fl <- pskewnorm(q = x$x2l[i] - x1s, par1 = par1, par2 = par2, par3 = par3)
+            Fr <- pskewnorm(q = x$x2r[i] - x1s, par1 = par1, par2 = par2, par3 = par3)
             z <- z + log(mean(Fr - Fl))
           }
           z
@@ -172,8 +176,8 @@ kerlikelihood <- function(x, family, likapprox = "ni") {
           z <- 0
           for(i in 1:n) {
             h <- function(x1) {
-              Fl <- pskewnorm(x = x$x2l[i] - x1, par1 = par1, par2 = par2, par3 = par3)
-              Fr <- pskewnorm(x = x$x2r[i] - x1, par1 = par1, par2 = par2, par3 = par3)
+              Fl <- pskewnorm(q = x$x2l[i] - x1, par1 = par1, par2 = par2, par3 = par3)
+              Fr <- pskewnorm(q = x$x2r[i] - x1, par1 = par1, par2 = par2, par3 = par3)
               hval <- Fr - Fl
               hval
             }
@@ -360,6 +364,7 @@ kerlikelihood <- function(x, family, likapprox = "ni") {
     }
   }
   o <- c(famdesc, list(loglik = loglik, originscale = originscale,
-           censtype = censtype, J = J, likapprox = likapprox))
+           censtype = censtype, J = J, likapprox = likapprox, xmin = xmin,
+           xmax = xmax))
   return(o)
 }

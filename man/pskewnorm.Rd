@@ -4,10 +4,10 @@
 \alias{pskewnorm}
 \title{Distribution function of the Skew-Normal Distribution}
 \usage{
-pskewnorm(x, par1 = 0, par2 = 1, par3 = 0)
+pskewnorm(q, par1 = 0, par2 = 1, par3 = 0)
 }
 \arguments{
-\item{x}{A vector of quantiles.}
+\item{q}{A vector of quantiles.}
 
 \item{par1}{Location parameter of the skew-normal distribution.}
 
@@ -23,7 +23,7 @@ The \code{pskewnorm} routine uses Owen's (1956)
 \eqn{T(h,a)} function to evaluate the distribution function.
 }
 \examples{
-pskewnorm(x = c(0.1,1.3))
+pskewnorm(q = c(0.1,1.3))
 
 }
 \references{

@@ -56,7 +56,7 @@ parameters as well as different features of the fitted delay variable
 distribution (mean, variance, standard deviation and selected quantiles). The
 nonparametric bootstrap is used to compute standard errors and confidence
 intervals for the model parameters and different features. Maximum likelihood
-estimates are computed with the \code{optim} function using the 
+estimates are computed with the \code{optim} function using the
 Nelder and Mead (1965) method. Initial parameter values are computed via a
 moment matching approach.
 }
@@ -64,7 +64,7 @@ moment matching approach.
 Nelder, J. A. and Mead, R. (1965). A simplex algorithm for
 function minimization. \emph{Computer Journal}, \strong{7}, 308–313.
 
-Mandel, M. (2013). Simulation-based confidence intervals 
+Mandel, M. (2013). Simulation-based confidence intervals
 for functions with complicated derivatives. \emph{The American Statistician},
 \strong{67}(2), 76-81.
 }
