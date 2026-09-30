@@ -53,17 +53,17 @@ plot.parfitml <- function(x, xlim = NULL, grid = 500L,
   }
   if (tartype == "pdf") {
     tarname <- x$dname
-    eval <- c(list(x = xx), parvals)
+    evalargs <- c(list(x = xx), parvals)
     legpos <- "topright"
   } else {
     tarname <- x$pname
-    eval <- c(list(q = xx), parvals)
+    evalargs <- c(list(q = xx), parvals)
     legpos <- "topleft"
   }
   if (x$fname == "skewnorm") {
-    graphics::plot(xx, do.call(get(paste0(tarname)), eval), ...)
+    graphics::plot(xx, do.call(get(paste0(tarname)), evalargs), ...)
   } else {
-    graphics::plot(xx, do.call(get(paste0(tarname), asNamespace("stats")), eval), ...)
+    graphics::plot(xx, do.call(get(paste0(tarname), asNamespace("stats")), evalargs), ...)
   }
   if (isTRUE(legend)) {
     graphics::legend(legpos,

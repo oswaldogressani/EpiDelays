@@ -70,9 +70,9 @@ nonparfit <- function(x, Bboot = 1000, pgbar = TRUE) {
       return(val)
     }
     mu <- mean(tmid)
-    sd <- sqrt(mean((tl^2 + tl * tr + tr^2) / 3) - mu^2)
+    sdhat <- sqrt(mean((tl^2 + tl * tr + tr^2) / 3) - mu^2)
     qp <- sapply(pfeats, qfun)
-    o <- list(mu = mu, sd = sd, qp = qp)
+    o <- list(mu = mu, sd = sdhat, qp = qp)
     return(o)
   }
   npp <- pointestim(xl, xr)
