@@ -8,7 +8,7 @@ kerlikelihood(
   x,
   family,
   likapprox = "ni",
-  L = 0,
+  L = -Inf,
   D = Inf,
   dprimary = stats::dunif,
   dprimary_args = list()
@@ -28,7 +28,8 @@ to \code{primarycensored::dprimarycensored()}. Another possibility is
 \code{"mc"} for crude Monte Carlo sampling with 1000 samples.}
 
 \item{L}{Lower truncation point applied to the underlying delay
-distribution. Defaults to \code{0}. When \code{L > 0} the per-row
+distribution. Defaults to \code{-Inf} (no left truncation), matching
+\code{primarycensored}. When \code{L} is finite the per-row
 contribution is rescaled by the truncated CDF.}
 
 \item{D}{Upper truncation point applied to the underlying delay

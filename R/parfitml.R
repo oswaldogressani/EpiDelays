@@ -36,7 +36,8 @@
 #' @param Bboot Number of bootstrap samples. Default is 1000.
 #' @param pgbar Should a progress bar be displayed in console? Default is TRUE.
 #' @param L Lower truncation point of the underlying delay distribution.
-#' Default is \code{0}. Must satisfy \code{L >= 0} and \code{L < D}. Data are
+#' Default is \code{-Inf} (no left truncation), matching
+#' \code{primarycensored}. Must satisfy \code{L < D}. Data are
 #' assumed to be drawn conditional on the underlying delay lying inside
 #' \code{[L, D]}; the fitted parameters describe the unconditional delay
 #' distribution.
@@ -63,12 +64,12 @@
 #' @export
 
 parfitml <- function(x, family, Bboot = 1000, pgbar = TRUE,
-                     L = 0, D = Inf,
+                     L = -Inf, D = Inf,
                      dprimary = stats::dunif, dprimary_args = list()) {
   # Validate truncation bounds up front, mirroring
   # primarycensored::.check_truncation_bounds.
-  if (!is.numeric(L) || length(L) != 1L || is.na(L) || L < 0) {
-    stop("L must be a non-negative scalar.")
+  if (!is.numeric(L) || length(L) != 1L || is.na(L)) {
+    stop("L must be a numeric scalar.")
   }
   if (!is.numeric(D) || length(D) != 1L || is.na(D) || L >= D) {
     stop("L must be less than D.")

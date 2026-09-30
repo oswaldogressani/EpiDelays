@@ -8,7 +8,7 @@ parfitmom(
   x,
   family,
   incheck = TRUE,
-  L = 0,
+  L = -Inf,
   D = Inf,
   dprimary = stats::dunif,
   dprimary_args = list()

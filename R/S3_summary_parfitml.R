@@ -70,7 +70,7 @@ summary.parfitml <- function(object, ndigits = 3, type = "full", ...) {
   }
   # Truncation bounds are only surfaced when they differ from the defaults;
   # the untruncated path continues to print its original summary block.
-  has_trunc <- isTRUE(object$L > 0) ||
+  has_trunc <- isTRUE(is.finite(object$L)) ||
     (!is.null(object$D) && is.finite(object$D))
   if(type == "full") { #--- Print output (full)
     cat("---------------------------------------------------- \n")

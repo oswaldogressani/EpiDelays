@@ -10,7 +10,7 @@ parfitml(
   family,
   Bboot = 1000,
   pgbar = TRUE,
-  L = 0,
+  L = -Inf,
   D = Inf,
   dprimary = stats::dunif,
   dprimary_args = list()
@@ -30,7 +30,8 @@ family. Can be one of the following: \code{"gaussian"}, \code{"gamma"},
 \item{pgbar}{Should a progress bar be displayed in console? Default is TRUE.}
 
 \item{L}{Lower truncation point of the underlying delay distribution.
-Default is \code{0}. Must satisfy \code{L >= 0} and \code{L < D}. Data are
+Default is \code{-Inf} (no left truncation), matching
+\code{primarycensored}. Must satisfy \code{L < D}. Data are
 assumed to be drawn conditional on the underlying delay lying inside
 \code{[L, D]}; the fitted parameters describe the unconditional delay
 distribution.}

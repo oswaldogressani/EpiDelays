@@ -41,7 +41,8 @@
 #' to \code{primarycensored::dprimarycensored()}. Another possibility is
 #' \code{"mc"} for crude Monte Carlo sampling with 1000 samples.
 #' @param L Lower truncation point applied to the underlying delay
-#' distribution. Defaults to \code{0}. When \code{L > 0} the per-row
+#' distribution. Defaults to \code{-Inf} (no left truncation), matching
+#' \code{primarycensored}. When \code{L} is finite the per-row
 #' contribution is rescaled by the truncated CDF.
 #' @param D Upper truncation point applied to the underlying delay
 #' distribution. Defaults to \code{Inf}. Together with \code{L}, rows whose
@@ -73,7 +74,7 @@
 #'
 #' @keywords internal
 
-kerlikelihood <- function(x, family, likapprox = "ni", L = 0, D = Inf,
+kerlikelihood <- function(x, family, likapprox = "ni", L = -Inf, D = Inf,
                           dprimary = stats::dunif,
                           dprimary_args = list()) {
   if(!(likapprox %in% c("ni", "mc"))) {
@@ -81,8 +82,8 @@ kerlikelihood <- function(x, family, likapprox = "ni", L = 0, D = Inf,
   }
   # Truncation bound validation mirrors
   # primarycensored::.check_truncation_bounds.
-  if (!is.numeric(L) || length(L) != 1L || is.na(L) || L < 0) {
-    stop("L must be a non-negative scalar.")
+  if (!is.numeric(L) || length(L) != 1L || is.na(L)) {
+    stop("L must be a numeric scalar.")
   }
   if (!is.numeric(D) || length(D) != 1L || is.na(D) || L >= D) {
     stop("L must be less than D.")
@@ -133,7 +134,7 @@ kerlikelihood <- function(x, family, likapprox = "ni", L = 0, D = Inf,
     # interpreted under the truncated model. Warning the caller and removing
     # the row keeps the fit going while making the loss explicit; the caller
     # can re-run after narrowing the offending intervals.
-    if (L > 0 || is.finite(D)) {
+    if (is.finite(L) || is.finite(D)) {
       keep <- x$xl >= L & x$xr <= D
       if (!all(keep)) {
         warning(
@@ -170,7 +171,7 @@ kerlikelihood <- function(x, family, likapprox = "ni", L = 0, D = Inf,
     # straddling window into a visible subset (which silently changes the
     # observation), warn the caller and drop the row so the modelled and
     # observed windows match.
-    if (L > 0 || is.finite(D)) {
+    if (is.finite(L) || is.finite(D)) {
       lowers <- x$x2l - x$x1l
       uppers <- x$x2r - x$x1l
       keep <- lowers >= L & uppers <= D
@@ -194,11 +195,11 @@ kerlikelihood <- function(x, family, likapprox = "ni", L = 0, D = Inf,
   }
   n <- nrow(x)
   # Helper: sum log-contributions for the single-interval (nc == 2) branch,
-  # applying the truncation correction when L > 0 or D < Inf. Reduces to
+  # applying the truncation correction when L or D is finite. Reduces to
   # sum(log(Fr - Fl)) in the default case, so the pre-existing code path is
   # preserved bit-for-bit.
   single_interval_sum <- function(Fl, Fr, FL, FD) {
-    if (L <= 0 && is.infinite(D)) {
+    if (is.infinite(L) && is.infinite(D)) {
       return(sum(log(Fr - Fl)))
     }
     num <- pmin(Fr, FD) - pmax(Fl, FL)
@@ -209,7 +210,7 @@ kerlikelihood <- function(x, family, likapprox = "ni", L = 0, D = Inf,
   # for a single row, subtract log(mean(F(D - x1s) - F(L - x1s))). Returns 0
   # in the default case, keeping the untruncated mc path unchanged.
   mc_row_correction <- function(x1s, pdist, pars) {
-    if (L <= 0 && is.infinite(D)) {
+    if (is.infinite(L) && is.infinite(D)) {
       return(0)
     }
     if (is.finite(D)) {
@@ -217,7 +218,7 @@ kerlikelihood <- function(x, family, likapprox = "ni", L = 0, D = Inf,
     } else {
       Fd <- rep(1, length(x1s))
     }
-    if (L > 0) {
+    if (is.finite(L)) {
       Fl <- do.call(pdist, c(list(L - x1s), pars))
     } else {
       Fl <- rep(0, length(x1s))
@@ -261,7 +262,7 @@ kerlikelihood <- function(x, family, likapprox = "ni", L = 0, D = Inf,
               pwindow = pw, swindow = sw,
               L = L, D = D,
               dprimary = dprimary_local,
-              dprimary_args = dprimary_args_local,
+              primary_args = dprimary_args_local,
               log = TRUE
             ),
             pars
