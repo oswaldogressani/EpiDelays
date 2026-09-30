@@ -43,7 +43,7 @@ nonparfit <- function(x, Bboot = 1000, pgbar = TRUE) {
   n <- nrow(x)
   nc <- ncol(x)
   if (nc != 2) {
-    stop("Data frame must have 2 columns")
+    stop("Data frame must have 2 columns", call. = FALSE)
   }
   dfck <- kerdata_check(x = x) # data frame check
   if (dfck$result == "fail") {

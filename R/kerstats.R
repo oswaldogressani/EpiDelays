@@ -16,7 +16,7 @@ kerstats <- function(slist, pestim, method = c("norm", "boot"), se = NULL,
   citype <- match.arg(method)
   if (citype == "norm") {
     if (is.null(se)) {
-      stop("Standard errors missing.")
+      stop("Standard errors missing.", call. = FALSE)
     }
     z095 <- stats::qnorm(p = 0.95)
     z0975 <- stats::qnorm(p = 0.975)
@@ -33,7 +33,7 @@ kerstats <- function(slist, pestim, method = c("norm", "boot"), se = NULL,
     )
   } else if (citype == "boot") {
     if (is.null(boot)) {
-      stop("Bootstrap sample is missing.")
+      stop("Bootstrap sample is missing.", call. = FALSE)
     }
     o <- mapply(
       function(l, point, se, ci90l, ci90r, ci95l, ci95r) {

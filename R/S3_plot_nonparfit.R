@@ -18,7 +18,7 @@
 
 plot.nonparfit <- function(x, xlim = NULL, grid = 500L, legend = TRUE, ...) {
   if (!inherits(x, "nonparfit")) {
-    stop("x must be a nonparfit object")
+    stop("x must be a nonparfit object", call. = FALSE)
   }
   xl <- x$x[, 1]
   xr <- x$x[, 2]

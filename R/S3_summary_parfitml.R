@@ -16,10 +16,10 @@
 
 summary.parfitml <- function(object, ndigits = 3, type = "full", ...) {
   if (!inherits(object, "parfitml")) {
-    stop("object must be a parfitml object")
+    stop("object must be a parfitml object", call. = FALSE)
   }
   if (!(type %in% c("full", "compact"))) {
-    stop("type must either be 'full' or 'compact'")
+    stop("type must either be 'full' or 'compact'", call. = FALSE)
   }
   dfpar <- cbind(
     name = unlist(object[names(object$parfit)]),

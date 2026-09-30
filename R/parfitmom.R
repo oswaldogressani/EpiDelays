@@ -58,13 +58,13 @@ parfitmom <- function(x, family, incheck = TRUE, L = -Inf, D = Inf,
   # `mompoint_ub` is a known-biased optimiser start under non-trivial
   # truncation; parfitml()'s optim call still converges in practice.
   if (!is.numeric(L) || length(L) != 1L || is.na(L)) {
-    stop("L must be a numeric scalar.")
+    stop("L must be a numeric scalar.", call. = FALSE)
   }
   if (!is.numeric(D) || length(D) != 1L || is.na(D) || L >= D) {
-    stop("L must be less than D.")
+    stop("L must be less than D.", call. = FALSE)
   }
   if (!is.logical(incheck)) {
-    stop("incheck must be either TRUE or FALSE")
+    stop("incheck must be either TRUE or FALSE", call. = FALSE)
   } else if (isTRUE(incheck)) {
     # Input checks
     dfck <- kerdata_check(x = x) # data frame check

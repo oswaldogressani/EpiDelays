@@ -82,10 +82,10 @@ parfitml <- function(x, family, ci = c("npboot", "pboot", "sbnorm"),
   # Validate truncation bounds up front, mirroring
   # primarycensored::.check_truncation_bounds.
   if (!is.numeric(L) || length(L) != 1L || is.na(L)) {
-    stop("L must be a numeric scalar.")
+    stop("L must be a numeric scalar.", call. = FALSE)
   }
   if (!is.numeric(D) || length(D) != 1L || is.na(D) || L >= D) {
-    stop("L must be less than D.")
+    stop("L must be less than D.", call. = FALSE)
   }
   tic <- proc.time()
   m <- kerlikelihood(
@@ -124,7 +124,7 @@ parfitml <- function(x, family, ci = c("npboot", "pboot", "sbnorm"),
     if ("Bboot" %in% ...names()) {
       Bboot <- list(...)$Bboot
       if (!(is.numeric(Bboot) && Bboot > 0)) {
-        stop("Bboot must be a positive integer.")
+        stop("Bboot must be a positive integer.", call. = FALSE)
       }
       Bboot <- round(Bboot)
     } else {
@@ -181,7 +181,10 @@ parfitml <- function(x, family, ci = c("npboot", "pboot", "sbnorm"),
     if ("ns" %in% ...names()) {
       ns <- list(...)$ns
       if (!(is.numeric(ns) && ns > 0)) {
-        stop("Number of samples for ci must be a positive integer.")
+        stop(
+          "Number of samples for ci must be a positive integer.",
+          call. = FALSE
+        )
       }
       ns <- round(ns)
     } else {

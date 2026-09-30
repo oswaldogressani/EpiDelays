@@ -23,7 +23,7 @@
 plot.parfitml <- function(x, xlim = NULL, grid = 500L,
                           target = c("pdf", "cdf"), legend = TRUE, ...) {
   if (!inherits(x, "parfitml")) {
-    stop("x must be a parfitml object")
+    stop("x must be a parfitml object", call. = FALSE)
   }
   tartype <- match.arg(target)
   if (is.null(xlim)) { # Default domain

@@ -26,14 +26,14 @@
 
 rmvnorm <- function(n = 1, mean, sigma) {
   if (!is.numeric(n) || length(n) != 1 || n <= 0) {
-    stop("Number of draws n must be a positive integer.")
+    stop("Number of draws n must be a positive integer.", call. = FALSE)
   }
   if (!isSymmetric(sigma)) {
-    stop("Matrix sigma must be symmetric.")
+    stop("Matrix sigma must be symmetric.", call. = FALSE)
   }
   d <- length(mean)
   if (d != nrow(sigma)) {
-    stop("The dimension of mean and covar do not match.")
+    stop("The dimension of mean and covar do not match.", call. = FALSE)
   }
   NAmat <- matrix(NA, nrow = d, ncol = d)
   # Try Cholesky decomposition and compute lower triangular matrix
@@ -50,7 +50,7 @@ rmvnorm <- function(n = 1, mean, sigma) {
     eigdec <- eigen(sigma, symmetric = TRUE)
     eigval <- eigdec$values
     if (any(eigval < 0)) {
-      stop("Matrix sigma must be positive semi-definite.")
+      stop("Matrix sigma must be positive semi-definite.", call. = FALSE)
     }
     S <- eigdec$vectors %*% diag(sqrt(eigval), d)
     method <- "eigendecomposition"
