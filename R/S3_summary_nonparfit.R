@@ -15,7 +15,9 @@ summary.nonparfit <- function(object, ndigits = 3, ...) {
   if (!inherits(object, "nonparfit")) {
     stop("object must be a nonparfit object", call. = FALSE)
   }
-  dfdel <- round(do.call(rbind, lapply(object$delayfit, as.data.frame)), ndigits)
+  dfdel <- round(
+    do.call(rbind, lapply(object$delayfit, as.data.frame)), ndigits
+  )
   cat("---------------------------------------------------- \n")
   cat("Nonparametric fit (method of Gressani and Hens 2025) \n")
   cat("---------------------------------------------------- \n")

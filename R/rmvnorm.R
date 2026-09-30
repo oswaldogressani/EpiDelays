@@ -18,7 +18,8 @@
 #'
 #' @author Oswaldo Gressani \email{oswaldo_gressani@hotmail.fr}.
 #'
-#' @references Ripley, B. D. (2009). Stochastic simulation. \emph{John Wiley & Sons}.
+#' @references Ripley, B. D. (2009). Stochastic simulation.
+#' \emph{John Wiley & Sons}.
 #' @references Rubinstein, R. Y. and Kroese, D. P. (2016). Simulation and
 #' the Monte Carlo method. \emph{John Wiley & Sons}.
 #'

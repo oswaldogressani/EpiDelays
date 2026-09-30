@@ -27,7 +27,8 @@ the routine relies on an eigendecomposition of the covariance matrix as a
 fallback option.
 }
 \references{
-Ripley, B. D. (2009). Stochastic simulation. \emph{John Wiley & Sons}.
+Ripley, B. D. (2009). Stochastic simulation.
+\emph{John Wiley & Sons}.
 
 Rubinstein, R. Y. and Kroese, D. P. (2016). Simulation and
 the Monte Carlo method. \emph{John Wiley & Sons}.

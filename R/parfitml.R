@@ -35,7 +35,8 @@
 #' \code{"lognormal"}, \code{"weibull"}, or \code{"skewnorm"}.
 #' @param ci The engine for computing confidence intervals. Default is
 #' \code{"npboot"} for nonparametric bootstrap. Other options are \code{"pboot"}
-#' for the parametric bootstrap (currently under construction) or \code{"sbnorm"}
+#' for the parametric bootstrap (currently under construction) or
+#' \code{"sbnorm"}
 #' which relies on a simulation-based approach to compute confidence intervals
 #' using asymptotic normality of the MLE estimator following Mandel (2013).
 #' @param L Lower truncation point of the underlying delay distribution.

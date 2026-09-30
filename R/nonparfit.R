@@ -1,4 +1,5 @@
-#' Nonparametric estimation for single interval-censored data based on uniform mixtures
+#' Nonparametric estimation for single interval-censored data based on
+#' uniform mixtures
 #'
 #' @description
 #' This routine uses a nonparametric methodology based on uniform mixtures
@@ -56,7 +57,9 @@ nonparfit <- function(x, Bboot = 1000, pgbar = TRUE) {
   pointestim <- function(tl, tr) { # Nonparametric point estimation
     tmid <- 0.5 * (tl + tr)
     tw <- tr - tl
-    Fhat <- function(t) ninv * sum((t - tl) / tw * (t >= tl & t <= tr) + (t > tr))
+    Fhat <- function(t) {
+      ninv * sum((t - tl) / tw * (t >= tl & t <= tr) + (t > tr))
+    }
     tord <- sort(c(tl, tr))
     Fhattord <- sapply(tord, Fhat)
     qfun <- function(p) { # Estimation of p-quantiles

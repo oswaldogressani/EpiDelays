@@ -1,4 +1,5 @@
-#' Plot the density or cumulative distribution function of a fitted parametric model
+#' Plot the density or cumulative distribution function of a fitted
+#' parametric model
 #'
 #' @description Can be used to plot the probability density function
 #' or the cumulative distribution function of a parametric model fitted with
@@ -63,7 +64,9 @@ plot.parfitml <- function(x, xlim = NULL, grid = 500L,
   if (x$fname == "skewnorm") {
     graphics::plot(xx, do.call(get(paste0(tarname)), evalargs), ...)
   } else {
-    graphics::plot(xx, do.call(get(paste0(tarname), asNamespace("stats")), evalargs), ...)
+    graphics::plot(
+      xx, do.call(get(paste0(tarname), asNamespace("stats")), evalargs), ...
+    )
   }
   if (isTRUE(legend)) {
     graphics::legend(legpos,
