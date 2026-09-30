@@ -4,7 +4,7 @@
 \alias{kerlikelihood}
 \title{Likelihood function for single and doubly interval-censored data}
 \usage{
-kerlikelihood(x, family, likapprox = "ni")
+kerlikelihood(x, family)
 }
 \arguments{
 \item{x}{A data frame with either two columns named \code{xl} and \code{xr},
@@ -13,17 +13,11 @@ description for constraints imposed on the columns.}
 
 \item{family}{A character string specifying the name of the parametric
 family.}
-
-\item{likapprox}{Approximation of the likelihood function in case of doubly
-interval-censored data. Default is \code{"ni"} for numerical integration.
-Another possibility is \code{"mc"} for crude Monte Carlo sampling with 1000
-samples.}
 }
 \value{
 A list containing information on the chosen parametric family,
 the log-likelihood function, a function that transforms back the parameters
-in their original scale, the censoring type and the approximation of the
-likelihood function used in case of doubly interval-censored data. It also
+in their original scale, and the censoring type. It also
 returns the Jacobian of the inverse of the function that transforms a
 bounded domain to an unbounded domain.
 }
@@ -48,13 +42,10 @@ Returns the log-likelihood function of parameters that have been transformed
 to live in an unbounded parameter space. This makes the
 maximization/evaluation of the likelihood function numerically more stable.
 The doubly interval-censored likelihood function requires to evaluate an
-inner integral. By default, this is implemented via numerical integration
-(ni) with \code{likapprox = "ni"}, where the integral is evaluated with the
-\code{integrate} routine. Another option is \code{likapprox = "mc"}, which
-uses crude Monte Carlo sampling to evaluate the inner integral in the
-doubly interval-censored likelihood function. Note that Monte
-Carlo sampling results in much longer computation times to evaluate the
-likelihood function. The number of Monte Carlo samples is fixed at 1000.
+inner integral. By default, this is implemented via numerical integration,
+where the integral is evaluated with the \code{integrate} routine. This
+routine also returns a function (logliki) that evaluates the log-likelihood
+pointwise at each datum.
 }
 \author{
 Oswaldo Gressani \email{oswaldo_gressani@hotmail.fr}

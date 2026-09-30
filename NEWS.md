@@ -24,3 +24,5 @@
 * Added rmvnorm to simulate from a multivariate Gaussian distribution.
 * Added simulation-based ci using asymptotic normality of MLE.
 * S3 methods (plot) for parfitml and nonparfit.
+* Simplified kerlikelihood function and added logliki pointwise contributions.
+* Added analytical evaluations for doubly interval-censored kerlikelihood.
