@@ -8,10 +8,15 @@ used to fit parametric delay distributions (`gamma`, `lognormal`,
 `weibull`, `gaussian`, `skewnorm`) via maximum likelihood. The
 `nonparfit` routine uses the nonparametric methodology developed by
 Gressani and Hens (2025) to obtain estimates of key epidemiological
-delay features without imposing any parametric assumptions. For both
-routines, the nonparametric bootstrap is used to compute standard errors
-and confidence intervals for often reported epidemiological delay
-features.
+delay features without imposing any parametric assumptions. 
+
+In the `nonparfit` routine, the nonparametric bootstrap is used to 
+compute standard errors and confidence intervals for often reported 
+epidemiological delay features. In the `parfitml` routine, the user
+can choose between the nonparametric bootstrap for confidence interval
+construction or a simulation-based method using the asymptotic normality
+property of the maximum likelihood estimator. The parametric bootstrap
+is currently under development.
 
 This package is currently under construction and additional features
 will be added in future releases.
@@ -25,7 +30,7 @@ will be added in future releases.
 #### Package version
 
 This is version 0.0.3 - “Parametric wave 2”.<br> Release date:
-2026-04-07 (April 7, 2026).
+2026-06-10 (June 10, 2026).
 
 #### Authors and contributors
 

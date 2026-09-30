@@ -31,8 +31,8 @@ qskewnorm <- function(p, par1 = 0, par2 = 1, par3 = 0) {
   sd <- sqrt(par2^2 * (1 - (2 / pi) * d3^2))
   xpl <- mean - sd * sqrt((1 - p) / p)
   xpu <- mean + sd * sqrt(p / (1 - p))
-  g <- function(x, prob)
-    pskewnorm(x, par1 = par1, par2 = par2, par3 = par3) - prob
+  g <- function(q, prob)
+    pskewnorm(q, par1 = par1, par2 = par2, par3 = par3) - prob
   xma <- cbind(p, xpl, xpu)
   frow <- function(r)
     stats::uniroot(f = g, lower = r[2], upper = r[3], p = r[1],

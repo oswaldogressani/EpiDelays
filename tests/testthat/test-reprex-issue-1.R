@@ -44,7 +44,7 @@ test_that("reprex (issue #1): gamma kerlikelihood == dprimarycensored", {
 
   v <- log(c(3, 1))  # shape = 3, rate = 1
 
-  m <- kerlikelihood(x, family = "gamma", likapprox = "ni")
+  m <- kerlikelihood(x, family = "gamma")
   expect_equal(
     pc_loglik(v, x, stats::pgamma,
               function(v) list(shape = exp(v[1]), rate = exp(v[2]))),
@@ -76,7 +76,7 @@ test_that("reprex (issue #1): gaussian kerlikelihood == dprimarycensored", {
 
   v <- c(2.5, log(1))  # mean = 2.5, sd = 1
 
-  m <- kerlikelihood(x, family = "gaussian", likapprox = "ni")
+  m <- kerlikelihood(x, family = "gaussian")
   expect_equal(
     pc_loglik(v, x, stats::pnorm,
               function(v) list(mean = v[1], sd = exp(v[2]))),

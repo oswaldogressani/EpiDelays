@@ -2,7 +2,7 @@
 #
 # Semantics: L and D truncate the underlying delay distribution. The per-row
 # log-likelihood picks up a `-log(F_cens(D) - F_cens(L))` correction term.
-# When L = 0 and D = Inf the defaults must reproduce the existing code path
+# When L = -Inf and D = Inf the defaults must reproduce the existing code path
 # to machine precision. Covers design doc notes/truncation-design.md sections
 # 1-5.
 
@@ -52,7 +52,7 @@ trunc_family_cases <- list(
   )
 )
 
-# Default behaviour: specifying L = 0, D = Inf must be numerically identical
+# Default behaviour: specifying L = -Inf, D = Inf must be numerically identical
 # to the existing (no-arg) call. Guards against accidental drift in the
 # default code path when L/D are added.
 for (fam in names(trunc_family_cases)) {
@@ -60,13 +60,13 @@ for (fam in names(trunc_family_cases)) {
     family <- fam
     case <- trunc_family_cases[[family]]
     test_that(sprintf(
-      "%s default L=0 D=Inf matches existing ni loglik exactly", family
+      "%s default L=-Inf D=Inf matches existing ni loglik exactly", family
     ), {
       skip_if_no_primarycensored()
       x <- make_double_data()
-      m_default <- kerlikelihood(x = x, family = family, likapprox = "ni")
+      m_default <- kerlikelihood(x = x, family = family)
       m_trunc <- kerlikelihood(
-        x = x, family = family, likapprox = "ni", L = 0, D = Inf
+        x = x, family = family, L = -Inf, D = Inf
       )
       expect_identical(
         m_default$loglik(case$v, x),
@@ -104,7 +104,7 @@ test_that("nc==4 truncation subtracts per-row log(F_cens(D) - F_cens(L))", {
   }, numeric(1)))
 
   m <- kerlikelihood(
-    x = x, family = "gaussian", likapprox = "ni", L = L, D = D
+    x = x, family = "gaussian", L = L, D = D
   )
   expect_equal(m$loglik(v, x), expected, tolerance = 1e-8)
 })
@@ -126,11 +126,11 @@ test_that("nc==4 ni drops left-straddle rows with a warning", {
   )
   v <- log(c(2, 0.5))
   expect_warning(
-    kerlikelihood(x = x, family = "gamma", likapprox = "ni", L = L, D = D),
+    kerlikelihood(x = x, family = "gamma", L = L, D = D),
     regexp = "straddle"
   )
   m <- suppressWarnings(
-    kerlikelihood(x = x, family = "gamma", likapprox = "ni", L = L, D = D)
+    kerlikelihood(x = x, family = "gamma", L = L, D = D)
   )
   expect_identical(nrow(m$x), 1L)
   ker_value <- m$loglik(v, m$x)
@@ -161,11 +161,11 @@ test_that("nc==4 ni drops right-straddle rows with a warning", {
   )
   v <- log(c(2, 0.5))
   expect_warning(
-    kerlikelihood(x = x, family = "gamma", likapprox = "ni", L = L, D = D),
+    kerlikelihood(x = x, family = "gamma", L = L, D = D),
     regexp = "straddle"
   )
   m <- suppressWarnings(
-    kerlikelihood(x = x, family = "gamma", likapprox = "ni", L = L, D = D)
+    kerlikelihood(x = x, family = "gamma", L = L, D = D)
   )
   expect_identical(nrow(m$x), 1L)
   ker_value <- m$loglik(v, m$x)
@@ -201,7 +201,7 @@ test_that("nc==2 truncation matches closed-form truncated CDF", {
   expected <- sum(log(Fr - Fl) - log(FD - FL))
 
   m <- kerlikelihood(
-    x = x, family = "gamma", likapprox = "ni", L = L, D = D
+    x = x, family = "gamma", L = L, D = D
   )
   expect_equal(m$loglik(v, x), expected, tolerance = 1e-12)
 })
@@ -213,9 +213,9 @@ test_that("nc==2 default L=0 D=Inf matches untruncated single-interval", {
     xr = c(1.5, 2.5, 3.5)
   )
   v <- log(c(2, 0.5))
-  m_default <- kerlikelihood(x = x, family = "gamma", likapprox = "ni")
+  m_default <- kerlikelihood(x = x, family = "gamma")
   m_trunc <- kerlikelihood(
-    x = x, family = "gamma", likapprox = "ni", L = 0, D = Inf
+    x = x, family = "gamma", L = 0, D = Inf
   )
   expect_identical(m_default$loglik(v, x), m_trunc$loglik(v, x))
 })
@@ -382,13 +382,13 @@ test_that("boundary parity: x2r - x1l == D yields finite loglik", {
   D <- 5
   L <- 0
   m <- kerlikelihood(
-    x = x, family = "gamma", likapprox = "ni", L = L, D = D
+    x = x, family = "gamma", L = L, D = D
   )
   val <- m$loglik(log(c(2, 0.5)), x)
   expect_true(is.finite(val))
 })
 
-test_that("parfitml errors when L is negative", {
+test_that("parfitml errors when L is not a numeric scalar", {
   skip_if_no_primarycensored()
   x <- data.frame(
     xl = c(1, 2),
@@ -396,9 +396,9 @@ test_that("parfitml errors when L is negative", {
   )
   expect_error(
     parfitml(
-      x = x, family = "gaussian", Bboot = 2L, pgbar = FALSE, L = -1
+      x = x, family = "gaussian", Bboot = 2L, pgbar = FALSE, L = NA_real_
     ),
-    regexp = "non-negative"
+    regexp = "numeric scalar"
   )
 })
 
@@ -490,25 +490,20 @@ test_that("summary.parfitml surfaces L and D when non-default", {
   expect_true(any(grepl("Right truncation", out, fixed = TRUE)))
 })
 
-test_that("kerlikelihood mc branch applies truncation correction", {
+test_that("finite negative L truncates real-line delays as primarycensored", {
   skip_if_no_primarycensored()
-  x_all <- make_double_data()
+  x <- make_double_data()
   v <- c(1.5, log(0.8))
-  L <- 0.1
-  D <- 10
-  keep <- (x_all$x2l - x_all$x1l) >= L & (x_all$x2r - x_all$x1l) <= D
-  x <- x_all[keep, ]
-  # Seed controls the primary draws used inside the closure. The mc and ni
-  # corrections share the same numerator, so checking that the mc result
-  # sits close to the ni result is a sanity check on the correction term.
-  m_ni <- kerlikelihood(
-    x = x, family = "gaussian", likapprox = "ni", L = L, D = D
-  )
-  m_mc <- kerlikelihood(
-    x = x, family = "gaussian", likapprox = "mc", L = L, D = D
-  )
-  set.seed(20260413L)
-  v_mc <- m_mc$loglik(v, x)
-  v_ni <- m_ni$loglik(v, x)
-  expect_equal(v_mc, v_ni, tolerance = 5e-2)
+  m <- kerlikelihood(x = x, family = "gaussian", L = -1)
+  expected <- sum(vapply(seq_len(nrow(x)), function(i) {
+    primarycensored::dprimarycensored(
+      x = x$x2l[i] - x$x1l[i], pdist = stats::pnorm,
+      pwindow = x$x1r[i] - x$x1l[i], swindow = x$x2r[i] - x$x2l[i],
+      L = -1, mean = 1.5, sd = 0.8, log = TRUE
+    )
+  }, numeric(1)))
+  expect_equal(m$loglik(v, x), expected, tolerance = 1e-8)
+  expect_false(isTRUE(all.equal(
+    m$loglik(v, x), kerlikelihood(x = x, family = "gaussian")$loglik(v, x)
+  )))
 })

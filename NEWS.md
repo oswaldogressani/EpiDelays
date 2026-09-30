@@ -20,7 +20,9 @@
 * Added Skew-Normal distribution.
 * Added doubly interval-censored likelihood functions.
 * S3 methods (summary) for parfitml and nonparfit.
-* Release date: 2026-04-07 (April 7, 2026)
-
-
-
+* Updated method of moments approach for skew-normal family.
+* Added rmvnorm to simulate from a multivariate Gaussian distribution.
+* Added simulation-based ci using asymptotic normality of MLE.
+* S3 methods (plot) for parfitml and nonparfit.
+* Simplified kerlikelihood function and added logliki pointwise contributions.
+* Added analytical evaluations for doubly interval-censored kerlikelihood.

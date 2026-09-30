@@ -21,7 +21,7 @@
 #' intervals.
 #'
 #' @param x A data frame with either two columns named \code{xl} and \code{xr},
-#' or four columns named \code{x1l} and \code{x1r}, \code{x2l}, \code{x2r}. See
+#' or four columns named \code{x1l}, \code{x1r}, \code{x2l}, \code{x2r}. See
 #' description for constraints imposed on the columns.
 #' @param family A character string specifying the name of the parametric
 #' family. Can be one of the following: \code{"gaussian"}, \code{"gamma"},
@@ -51,14 +51,14 @@
 #'
 #' @export
 
-parfitmom <- function(x, family, incheck = TRUE, L = 0, D = Inf,
+parfitmom <- function(x, family, incheck = TRUE, L = -Inf, D = Inf,
                       dprimary = stats::dunif, dprimary_args = list()) {
   # L and D are accepted so parfitml() can forward them, but the moment
   # estimators below do not correct for truncation. The resulting
   # `mompoint_ub` is a known-biased optimiser start under non-trivial
   # truncation; parfitml()'s optim call still converges in practice.
-  if (!is.numeric(L) || length(L) != 1L || is.na(L) || L < 0) {
-    stop("L must be a non-negative scalar.")
+  if (!is.numeric(L) || length(L) != 1L || is.na(L)) {
+    stop("L must be a numeric scalar.")
   }
   if (!is.numeric(D) || length(D) != 1L || is.na(D) || L >= D) {
     stop("L must be less than D.")

@@ -8,12 +8,12 @@ interval-censored data}
 parfitml(
   x,
   family,
-  Bboot = 1000,
-  pgbar = TRUE,
-  L = 0,
+  ci = c("npboot", "pboot", "sbnorm"),
+  L = -Inf,
   D = Inf,
   dprimary = stats::dunif,
-  dprimary_args = list()
+  dprimary_args = list(),
+  ...
 )
 }
 \arguments{
@@ -25,12 +25,15 @@ description for constraints imposed on the columns.}
 family. Can be one of the following: \code{"gaussian"}, \code{"gamma"},
 \code{"lognormal"}, \code{"weibull"}, or \code{"skewnorm"}.}
 
-\item{Bboot}{Number of bootstrap samples. Default is 1000.}
-
-\item{pgbar}{Should a progress bar be displayed in console? Default is TRUE.}
+\item{ci}{The engine for computing confidence intervals. Default is
+\code{"npboot"} for nonparametric bootstrap. Other options are \code{"pboot"}
+for the parametric bootstrap (currently under construction) or \code{"sbnorm"}
+which relies on a simulation-based approach to compute confidence intervals
+using asymptotic normality of the MLE estimator following Mandel (2013).}
 
 \item{L}{Lower truncation point of the underlying delay distribution.
-Default is \code{0}. Must satisfy \code{L >= 0} and \code{L < D}. Data are
+Default is \code{-Inf} (no left truncation), matching
+\code{primarycensored}. Must satisfy \code{L < D}. Data are
 assumed to be drawn conditional on the underlying delay lying inside
 \code{[L, D]}; the fitted parameters describe the unconditional delay
 distribution.}
@@ -46,6 +49,13 @@ EpiDelays versions. Non-uniform choices include
 
 \item{dprimary_args}{A named list of additional arguments passed to
 \code{dprimary}. Defaults to an empty list.}
+
+\item{...}{Further arguments. Specifying e.g. \code{Bboot = 1000} permits
+to fix the bootstrap sample size to 1000 (the default is 100 here). Likewise
+specifying \code{ns = 1000} permits to fix the number of simulated samples
+from the Gaussian distribution of the MLE in the Mandel (2013) method (the
+default is 100 here). Also, specifying \code{pgbar = TRUE} shows a progress
+bar for the bootstrap.}
 }
 \value{
 A list containing detailed information on the fitted parametric
@@ -73,14 +83,18 @@ This routine computes maximum likelihood estimates of model
 parameters as well as different features of the fitted delay variable
 distribution (mean, variance, standard deviation and selected quantiles). The
 nonparametric bootstrap is used to compute standard errors and confidence
-intervals for the model parameters and different features. By default, the
-number of bootstrap samples is fixed at 1000. Maximum likelihood estimates
-are computed with the \code{optim} function using the Nelder and Mead (1965)
-method. Initial parameter values are computed via a moment matching approach.
+intervals for the model parameters and different features. Maximum likelihood
+estimates are computed with the \code{optim} function using the
+Nelder and Mead (1965) method. Initial parameter values are computed via a
+moment matching approach.
 }
 \references{
 Nelder, J. A. and Mead, R. (1965). A simplex algorithm for
 function minimization. \emph{Computer Journal}, \strong{7}, 308–313.
+
+Mandel, M. (2013). Simulation-based confidence intervals
+for functions with complicated derivatives. \emph{The American Statistician},
+\strong{67}(2), 76-81.
 }
 \author{
 Oswaldo Gressani \email{oswaldo_gressani@hotmail.fr} (original
