@@ -130,3 +130,36 @@ test_that("pskewnorm takes q and stays a valid CDF when saturated", {
   expect_true(all(p >= 0 & p <= 1))
   expect_false(is.unsorted(p[order(q)]))
 })
+
+test_that("logliki gives fresh results when x changes between calls", {
+  skip_if_no_primarycensored()
+  # optim reuses one x, but the bootstrap passes resampled frames to the
+  # same closure, so any per-x preparation must not leak between frames.
+  x <- mixed_window_data()
+  m <- kerlikelihood(x = x, family = "gamma")
+  v <- log(c(2, 0.5))
+  first <- m$logliki(v, x)
+  xb <- x[c(6, 1, 1, 3), ]
+  expect_equal(
+    m$logliki(v, xb),
+    kerlikelihood(x = xb, family = "gamma")$logliki(v, xb),
+    tolerance = 1e-12
+  )
+  expect_identical(m$logliki(v, x), first)
+})
+
+test_that("logliki handles duplicated rows and parameter changes", {
+  skip_if_no_primarycensored()
+  x <- mixed_window_data()[c(1, 2, 1, 4, 2, 2, 6, 5, 3), ]
+  m <- kerlikelihood(x = x, family = "weibull", L = 1, D = 25)
+  for (v in list(log(c(2, 2)), log(c(1.2, 5)), log(c(3, 1.5)))) {
+    expected <- vapply(seq_len(nrow(x)), function(i) {
+      primarycensored::dprimarycensored(
+        x = x$x2l[i] - x$x1l[i], pdist = stats::pweibull,
+        pwindow = x$x1r[i] - x$x1l[i], swindow = x$x2r[i] - x$x2l[i],
+        L = 1, D = 25, shape = exp(v[1]), scale = exp(v[2]), log = TRUE
+      )
+    }, numeric(1))
+    expect_equal(m$logliki(v, x), expected, tolerance = 1e-12)
+  }
+})
