@@ -24,7 +24,7 @@
 #' @export
 
 qskewnorm <- function(p, par1 = 0, par2 = 1, par3 = 0) {
-  if (any(p <= 0) | any(p >= 1)) {
+  if (any(p <= 0) || any(p >= 1)) {
     stop("Values in p must be in (0,1)", call. = FALSE)
   }
   d3 <- par3 / sqrt(1 + par3^2)
