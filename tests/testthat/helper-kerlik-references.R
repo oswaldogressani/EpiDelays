@@ -49,3 +49,65 @@ kerlik_loglik_via_dprimarycensored <- function(x, pdist, pars) {
   }, numeric(1)))
 }
 # nolint end
+
+# Closed-form reference for the uniform-primary inner integral, following
+# the antiderivative approach in upstream EpiDelays (oswaldogressani,
+# commit 0f33ae7). With G(u) = int_0^u F(s) ds, the per-row integral is
+#   G(x2r - x1l) - G(x2r - x1r) - G(x2l - x1l) + G(x2l - x1r).
+# Rows where cancellation leaves a non-positive value fall back to
+# integrate(), as upstream does. Returns per-row log contributions.
+# nolint start: object_length_linter, line_length_linter.
+kerlik_analytical_G <- function(family, pars) {
+  switch(family,
+    gaussian = function(u) {
+      z <- (u - pars$mean) / pars$sd
+      (u - pars$mean) * stats::pnorm(z) + pars$sd * stats::dnorm(z)
+    },
+    skewnorm = function(u) {
+      z1 <- (u - pars$par1) / pars$par2
+      z3 <- sqrt(1 + pars$par3^2)
+      z2 <- pars$par3 / z3
+      (u - pars$par1) *
+        pskewnorm(u, par1 = pars$par1, par2 = pars$par2, par3 = pars$par3) +
+        2 * pars$par2 * stats::dnorm(z1) * stats::pnorm(pars$par3 * z1) -
+        pars$par2 * sqrt(2 / pi) * z2 * stats::pnorm(z3 * z1)
+    },
+    gamma = function(u) {
+      u <- pmax(u, 0)
+      u * stats::pgamma(u, shape = pars$shape, rate = pars$rate) -
+        (pars$shape / pars$rate) *
+        stats::pgamma(u, shape = pars$shape + 1, rate = pars$rate)
+    },
+    lognormal = function(u) {
+      o <- numeric(length(u))
+      sp <- u > 0
+      lu <- log(u[sp])
+      o[sp] <- u[sp] * stats::pnorm((lu - pars$meanlog) / pars$sdlog) -
+        exp(pars$meanlog + 0.5 * pars$sdlog^2) *
+        stats::pnorm((lu - pars$meanlog - pars$sdlog^2) / pars$sdlog)
+      o
+    },
+    weibull = function(u) {
+      u <- pmax(u, 0)
+      z1 <- 1 + 1 / pars$shape
+      u * stats::pweibull(u, shape = pars$shape, scale = pars$scale) -
+        pars$scale * gamma(z1) *
+        stats::pgamma((u / pars$scale)^pars$shape, shape = z1)
+    }
+  )
+}
+
+kerlik_analytical_reference <- function(x, family, pdist, pars) {
+  G <- kerlik_analytical_G(family, pars)
+  I <- G(x$x2r - x$x1l) - G(x$x2r - x$x1r) -
+    G(x$x2l - x$x1l) + G(x$x2l - x$x1r)
+  for (i in which(I <= 0)) {
+    h <- function(t1) {
+      do.call(pdist, c(list(x$x2r[i] - t1), pars)) -
+        do.call(pdist, c(list(x$x2l[i] - t1), pars))
+    }
+    I[i] <- stats::integrate(h, lower = x$x1l[i], upper = x$x1r[i])$value
+  }
+  log(I) - log(x$x1r - x$x1l)
+}
+# nolint end

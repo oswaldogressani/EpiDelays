@@ -154,6 +154,25 @@ for (fam in names(family_cases)) {
     })
 
     test_that(sprintf(
+      "%s ni matches the closed-form antiderivative reference", family
+    ), {
+      # Regression lock against the closed-form uniform-primary integral
+      # used by upstream EpiDelays, so the primarycensored path and the
+      # analytical formulas stay interchangeable.
+      skip_if_no_primarycensored()
+      x <- make_double_data()
+
+      m <- kerlikelihood(x = x, family = family)
+      expect_equal(
+        m$loglik(case$v, x),
+        sum(kerlik_analytical_reference(
+          x = x, family = family, pdist = case$pdist, pars = case$pars
+        )),
+        tolerance = 1e-8
+      )
+    })
+
+    test_that(sprintf(
       "%s single-interval matches F(xr) - F(xl)", family
     ), {
       skip_if_no_primarycensored()
