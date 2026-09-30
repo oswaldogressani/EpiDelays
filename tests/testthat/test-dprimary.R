@@ -65,9 +65,9 @@ for (fam in names(family_points)) {
       skip_if_no_primarycensored()
       x <- make_double_data()
 
-      m_default <- kerlikelihood(x = x, family = family, likapprox = "ni")
+      m_default <- kerlikelihood(x = x, family = family)
       m_explicit <- kerlikelihood(
-        x = x, family = family, likapprox = "ni",
+        x = x, family = family,
         dprimary = stats::dunif, dprimary_args = list()
       )
 
@@ -205,23 +205,6 @@ test_that("dexpgrowth vs dunif give materially different fits", {
     fit_matched$parfit$par2$point - fit_unif$parfit$par2$point
   ) / fit_matched$parfit$par2$point
   expect_gt(max(drift_shape, drift_rate), 0.05)
-})
-
-test_that("mc branch errors on non-default dprimary", {
-  skip_if_no_primarycensored()
-  x <- make_double_data()
-  expect_error(
-    kerlikelihood(
-      x = x, family = "gamma", likapprox = "mc",
-      dprimary = primarycensored::dexpgrowth,
-      dprimary_args = list(r = 0.2)
-    ),
-    "likapprox"
-  )
-  # Default uniform on mc still works.
-  expect_silent(
-    kerlikelihood(x = x, family = "gamma", likapprox = "mc")
-  )
 })
 
 test_that("single-interval data errors on non-default dprimary", {

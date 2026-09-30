@@ -64,9 +64,9 @@ for (fam in names(trunc_family_cases)) {
     ), {
       skip_if_no_primarycensored()
       x <- make_double_data()
-      m_default <- kerlikelihood(x = x, family = family, likapprox = "ni")
+      m_default <- kerlikelihood(x = x, family = family)
       m_trunc <- kerlikelihood(
-        x = x, family = family, likapprox = "ni", L = -Inf, D = Inf
+        x = x, family = family, L = -Inf, D = Inf
       )
       expect_identical(
         m_default$loglik(case$v, x),
@@ -104,7 +104,7 @@ test_that("nc==4 truncation subtracts per-row log(F_cens(D) - F_cens(L))", {
   }, numeric(1)))
 
   m <- kerlikelihood(
-    x = x, family = "gaussian", likapprox = "ni", L = L, D = D
+    x = x, family = "gaussian", L = L, D = D
   )
   expect_equal(m$loglik(v, x), expected, tolerance = 1e-8)
 })
@@ -126,11 +126,11 @@ test_that("nc==4 ni drops left-straddle rows with a warning", {
   )
   v <- log(c(2, 0.5))
   expect_warning(
-    kerlikelihood(x = x, family = "gamma", likapprox = "ni", L = L, D = D),
+    kerlikelihood(x = x, family = "gamma", L = L, D = D),
     regexp = "straddle"
   )
   m <- suppressWarnings(
-    kerlikelihood(x = x, family = "gamma", likapprox = "ni", L = L, D = D)
+    kerlikelihood(x = x, family = "gamma", L = L, D = D)
   )
   expect_identical(nrow(m$x), 1L)
   ker_value <- m$loglik(v, m$x)
@@ -161,11 +161,11 @@ test_that("nc==4 ni drops right-straddle rows with a warning", {
   )
   v <- log(c(2, 0.5))
   expect_warning(
-    kerlikelihood(x = x, family = "gamma", likapprox = "ni", L = L, D = D),
+    kerlikelihood(x = x, family = "gamma", L = L, D = D),
     regexp = "straddle"
   )
   m <- suppressWarnings(
-    kerlikelihood(x = x, family = "gamma", likapprox = "ni", L = L, D = D)
+    kerlikelihood(x = x, family = "gamma", L = L, D = D)
   )
   expect_identical(nrow(m$x), 1L)
   ker_value <- m$loglik(v, m$x)
@@ -201,7 +201,7 @@ test_that("nc==2 truncation matches closed-form truncated CDF", {
   expected <- sum(log(Fr - Fl) - log(FD - FL))
 
   m <- kerlikelihood(
-    x = x, family = "gamma", likapprox = "ni", L = L, D = D
+    x = x, family = "gamma", L = L, D = D
   )
   expect_equal(m$loglik(v, x), expected, tolerance = 1e-12)
 })
@@ -213,9 +213,9 @@ test_that("nc==2 default L=0 D=Inf matches untruncated single-interval", {
     xr = c(1.5, 2.5, 3.5)
   )
   v <- log(c(2, 0.5))
-  m_default <- kerlikelihood(x = x, family = "gamma", likapprox = "ni")
+  m_default <- kerlikelihood(x = x, family = "gamma")
   m_trunc <- kerlikelihood(
-    x = x, family = "gamma", likapprox = "ni", L = 0, D = Inf
+    x = x, family = "gamma", L = 0, D = Inf
   )
   expect_identical(m_default$loglik(v, x), m_trunc$loglik(v, x))
 })
@@ -382,7 +382,7 @@ test_that("boundary parity: x2r - x1l == D yields finite loglik", {
   D <- 5
   L <- 0
   m <- kerlikelihood(
-    x = x, family = "gamma", likapprox = "ni", L = L, D = D
+    x = x, family = "gamma", L = L, D = D
   )
   val <- m$loglik(log(c(2, 0.5)), x)
   expect_true(is.finite(val))
@@ -488,29 +488,6 @@ test_that("summary.parfitml surfaces L and D when non-default", {
   out <- utils::capture.output(summary(fit))
   expect_true(any(grepl("Left truncation", out, fixed = TRUE)))
   expect_true(any(grepl("Right truncation", out, fixed = TRUE)))
-})
-
-test_that("kerlikelihood mc branch applies truncation correction", {
-  skip_if_no_primarycensored()
-  x_all <- make_double_data()
-  v <- c(1.5, log(0.8))
-  L <- 0.1
-  D <- 10
-  keep <- (x_all$x2l - x_all$x1l) >= L & (x_all$x2r - x_all$x1l) <= D
-  x <- x_all[keep, ]
-  # Seed controls the primary draws used inside the closure. The mc and ni
-  # corrections share the same numerator, so checking that the mc result
-  # sits close to the ni result is a sanity check on the correction term.
-  m_ni <- kerlikelihood(
-    x = x, family = "gaussian", likapprox = "ni", L = L, D = D
-  )
-  m_mc <- kerlikelihood(
-    x = x, family = "gaussian", likapprox = "mc", L = L, D = D
-  )
-  set.seed(20260413L)
-  v_mc <- m_mc$loglik(v, x)
-  v_ni <- m_ni$loglik(v, x)
-  expect_equal(v_mc, v_ni, tolerance = 5e-2)
 })
 
 test_that("finite negative L truncates real-line delays as primarycensored", {

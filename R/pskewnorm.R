@@ -1,6 +1,6 @@
 #' Distribution function of the Skew-Normal Distribution
 #'
-#' @param x A vector of quantiles.
+#' @param q A vector of quantiles.
 #' @param par1 Location parameter of the skew-normal distribution.
 #' @param par2 Scale parameter of the skew-normal distribution.
 #' @param par3 Slant parameter of the skew-normal distribution.
@@ -18,22 +18,22 @@
 #' \emph{Cambridge University Press}.
 #'
 #' @examples
-#' pskewnorm(x = c(0.1,1.3))
+#' pskewnorm(q = c(0.1,1.3))
 #'
 #' @export
 
-pskewnorm <- function(x, par1 = 0, par2 = 1, par3 = 0) {
-  z <- (x - par1) / par2
+pskewnorm <- function(q, par1 = 0, par2 = 1, par3 = 0) {
+  z <- (q - par1) / par2
   o <- stats::pnorm(z) - 2 * sapply(z, kerTOw, a = par3)
   # Owen's T can return values a hair outside [0, 1] in extreme parameter
   # regions (large |slant| or deep tails), and floating-point noise can leave
-  # the returned vector slightly non-monotone in x. A CDF must satisfy both,
+  # the returned vector slightly non-monotone in q. A CDF must satisfy both,
   # so we clamp into [0, 1] and lift any rounding-noise dips with cummax over
-  # the order of x. primarycensored::check_pdist enforces both properties on
+  # the order of q. primarycensored::check_pdist enforces both properties on
   # any pdist passed to dprimarycensored() and would otherwise abort during
   # an optim step that visits the saturation region.
   o <- pmin(1, pmax(0, o))
-  ord <- order(x)
+  ord <- order(q)
   o[ord] <- cummax(o[ord])
   o
 }

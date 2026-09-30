@@ -78,12 +78,7 @@ family_cases <- list(
   ),
   skewnorm = list(
     v = c(1, log(1), 2),
-    # pskewnorm uses `x` as its first argument; primarycensored calls pdist
-    # with the standard `q = ...` keyword, so the oracle wraps it the same
-    # way kerlikelihood() does internally.
-    pdist = function(q, par1, par2, par3) {
-      pskewnorm(x = q, par1 = par1, par2 = par2, par3 = par3)
-    },
+    pdist = pskewnorm,
     pars = list(par1 = 1, par2 = 1, par3 = 2)
   )
 )
@@ -99,7 +94,7 @@ for (fam in names(family_cases)) {
       skip_if_no_primarycensored()
       x <- make_double_data()
 
-      m <- kerlikelihood(x = x, family = family, likapprox = "ni")
+      m <- kerlikelihood(x = x, family = family)
       ker_value <- m$loglik(case$v, x)
 
       expected <- kerlik_loglik_via_dprimarycensored(
@@ -107,28 +102,6 @@ for (fam in names(family_cases)) {
       )
 
       expect_equal(ker_value, expected, tolerance = 1e-8)
-    })
-
-    test_that(sprintf(
-      "%s double-interval mc matches dprimarycensored oracle", family
-    ), {
-      skip_if_no_primarycensored()
-      x <- make_double_data()
-
-      expected <- kerlik_loglik_via_dprimarycensored(
-        x = x, pdist = case$pdist, pars = case$pars
-      )
-
-      # kerlikelihood's mc closure uses stats::runif internally; seeding the
-      # global RNG immediately before the call pins the Monte Carlo draws and
-      # keeps the test reproducible. With M = 1000 samples per row and 5 rows
-      # the summed log-likelihood sits well within 5e-2 of the ni target for
-      # all families tested here.
-      m <- kerlikelihood(x = x, family = family, likapprox = "mc")
-      set.seed(20260413L)
-      ker_value <- m$loglik(case$v, x)
-
-      expect_equal(ker_value, expected, tolerance = 5e-2)
     })
 
     test_that(sprintf(
@@ -143,7 +116,7 @@ for (fam in names(family_cases)) {
       skip_if_no_primarycensored()
       x <- make_double_data()
 
-      m <- kerlikelihood(x = x, family = family, likapprox = "ni")
+      m <- kerlikelihood(x = x, family = family)
       expect_equal(
         m$loglik(case$v, x),
         kerlik_integrate_reference(
@@ -182,7 +155,7 @@ for (fam in names(family_cases)) {
       # gamma/lognormal/weibull supports are respected.
       x <- data.frame(xl = x_double$x2l, xr = x_double$x2r)
 
-      m <- kerlikelihood(x = x, family = family, likapprox = "ni")
+      m <- kerlikelihood(x = x, family = family)
       ker_value <- m$loglik(case$v, x)
 
       Fl <- do.call(case$pdist, c(list(x$xl), case$pars))
@@ -240,7 +213,7 @@ test_that("kerlikelihood handles mixed pwindow rows", {
   stopifnot(length(unique(x$x1r - x$x1l)) == 2L)
 
   v <- c(1.5, log(0.8))
-  m <- kerlikelihood(x = x, family = "gaussian", likapprox = "ni")
+  m <- kerlikelihood(x = x, family = "gaussian")
 
   expected <- kerlik_loglik_via_dprimarycensored(
     x = x, pdist = stats::pnorm,

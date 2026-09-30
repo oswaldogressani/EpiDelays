@@ -19,7 +19,7 @@ test_that("kerlikelihood skewnorm ni branch tolerates saturation (narrow)", {
     x2l = (1:n) + stats::runif(n, 0, 0.2),
     x2r = (1:n) + 1 + stats::runif(n, 0, 0.2)
   )
-  m <- kerlikelihood(x = x, family = "skewnorm", likapprox = "ni")
+  m <- kerlikelihood(x = x, family = "skewnorm")
   # Narrow, heavily-skewed regime: tiny scale with a large positive slant
   # drives pskewnorm into the Owen's T saturation region.
   val <- m$loglik(c(0, log(0.1), 5), x)
@@ -36,7 +36,7 @@ test_that("kerlikelihood skewnorm ni branch tolerates saturation (shifted)", {
     x2l = (1:n) + stats::runif(n, 0, 0.2),
     x2r = (1:n) + 1 + stats::runif(n, 0, 0.2)
   )
-  m <- kerlikelihood(x = x, family = "skewnorm", likapprox = "ni")
+  m <- kerlikelihood(x = x, family = "skewnorm")
   # Far-from-data location with a large negative slant. The resulting CDF
   # is evaluated at quantiles deep in the tail where Owen's T noise is
   # worst; without the clamp-and-cummax wrapper check_pdist aborts.
@@ -65,7 +65,7 @@ test_that("kerlikelihood skewnorm ni branch tolerates saturation under L/D", {
   L <- 0.5
   D <- 100
   m <- kerlikelihood(
-    x = x, family = "skewnorm", likapprox = "ni", L = L, D = D
+    x = x, family = "skewnorm", L = L, D = D
   )
   val <- m$loglik(c(50, log(10), -5), x)
   expect_true(is.finite(val))

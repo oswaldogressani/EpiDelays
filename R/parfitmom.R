@@ -21,7 +21,7 @@
 #' intervals.
 #'
 #' @param x A data frame with either two columns named \code{xl} and \code{xr},
-#' or four columns named \code{x1l} and \code{x1r}, \code{x2l}, \code{x2r}. See
+#' or four columns named \code{x1l}, \code{x1r}, \code{x2l}, \code{x2r}. See
 #' description for constraints imposed on the columns.
 #' @param family A character string specifying the name of the parametric
 #' family. Can be one of the following: \code{"gaussian"}, \code{"gamma"},
