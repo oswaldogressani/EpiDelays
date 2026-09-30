@@ -14,57 +14,66 @@
 #'
 #' @export
 
+# nolint start: cyclocomp_linter.
 summary.parfitml <- function(object, ndigits = 3, type = "full", ...) {
-  if(!inherits(object, "parfitml"))
-    stop("object must be a parfitml object")
-  if(!(type %in% c("full", "compact"))) {
-    stop("type must either be 'full' or 'compact'")
+  if (!inherits(object, "parfitml")) {
+    stop("object must be a parfitml object", call. = FALSE)
   }
-  dfpar <- cbind(name = unlist(object[names(object$parfit)]),
-                 round(do.call(rbind, lapply(object$parfit, as.data.frame)),
-                       ndigits))
-  dfdel <- round(do.call(rbind, lapply(object$delayfit, as.data.frame)),
-                 ndigits)
+  if (!(type %in% c("full", "compact"))) {
+    stop("type must either be 'full' or 'compact'", call. = FALSE)
+  }
+  dfpar <- cbind(
+    name = unlist(object[names(object$parfit)]),
+    round(
+      do.call(rbind, lapply(object$parfit, as.data.frame)),
+      ndigits
+    )
+  )
+  dfdel <- round(
+    do.call(rbind, lapply(object$delayfit, as.data.frame)),
+    ndigits
+  )
   # Describe the primary event density only when it has been overridden; a
   # default uniform primary is the legacy behaviour and need not clutter
   # the summary block.
   dprimary_is_default <- is.null(object$dprimary) ||
     (identical(object$dprimary, stats::dunif) &&
-       length(object$dprimary_args) == 0)
-  if(!dprimary_is_default) {
+      length(object$dprimary_args) == 0)
+  if (!dprimary_is_default) {
     dprimary_label <- deparse(substitute(NULL)) # placeholder
     fn_name <- tryCatch(
       {
         env <- environment(object$dprimary)
         nm <- NULL
-        if(!is.null(env)) {
+        if (!is.null(env)) {
           nsname <- tryCatch(
-            getNamespaceName(env), error = function(e) NULL
+            getNamespaceName(env),
+            error = function(e) NULL
           )
-          if(!is.null(nsname)) {
+          if (!is.null(nsname)) {
             candidates <- ls(envir = env, all.names = TRUE)
-            for(c in candidates) {
-              if(identical(get(c, envir = env), object$dprimary)) {
+            for (c in candidates) {
+              if (identical(get(c, envir = env), object$dprimary)) {
                 nm <- paste0(nsname, "::", c)
                 break
               }
             }
           }
         }
-        if(is.null(nm)) nm <- "custom"
+        if (is.null(nm)) nm <- "custom"
         nm
       },
       error = function(e) "custom"
     )
-    if(length(object$dprimary_args) > 0) {
+    if (length(object$dprimary_args) > 0) {
       arg_bits <- paste0(
         names(object$dprimary_args), " = ",
         vapply(object$dprimary_args, function(a) {
-          paste(format(a), collapse = ", ")
+          toString(format(a))
         }, character(1))
       )
       dprimary_label <- paste0(
-        fn_name, " (", paste(arg_bits, collapse = ", "), ")"
+        fn_name, " (", toString(arg_bits), ")"
       )
     } else {
       dprimary_label <- fn_name
@@ -75,33 +84,33 @@ summary.parfitml <- function(object, ndigits = 3, type = "full", ...) {
   has_trunc <- isTRUE(is.finite(object$L)) ||
     (!is.null(object$D) && is.finite(object$D))
   cimethod <- object$cimethod
-  if (cimethod == "npboot") {
+  if (cimethod == "npboot") { # nolint: if_switch_linter.
     cidesc <- "Nonparametric bootstrap"
   } else if (cimethod == "pboot") {
     cidesc <- "Parametric bootstrap"
   } else if (cimethod == "sbnorm") {
     cidesc <- "Simulated (asympt. normality)"
   }
-  if(type == "full") { #--- Print output (full)
+  if (type == "full") { #--- Print output (full)
     cat("------------------------------------------------------------- \n")
     cat("Parametric model fit (maximum likelihood) \n")
     cat("------------------------------------------------------------- \n")
-    cat("Parametric family            : ", object$fname,"\n")
+    cat("Parametric family            : ", object$fname, "\n")
     cat("Number of parameters         : ", object$npars, "\n")
     cat("Censoring type               : ", object$censtype, "\n")
     cat("Sample size                  : ", object$n, "\n")
     cat("Routine time (seconds)       : ", object$elapsed, "\n")
     cat("MLE convergence              : ", object$mleconv, "\n")
-    if(cimethod == "npboot" || cimethod == "pboot"){
+    if (cimethod == "npboot" || cimethod == "pboot") {
       cat("Bootstrap sample size        : ", object$Bboot, "\n")
       cat("Bootstrap discarded          : ", object$bootdiscard, "\n")
-    } else if(cimethod == "sbnorm"){
+    } else if (cimethod == "sbnorm") {
       cat("No. of draws to compute ci   : ", object$ns, "\n")
     }
-    if(!dprimary_is_default) {
+    if (!dprimary_is_default) {
       cat("Primary event dist           : ", dprimary_label, "\n")
     }
-    if(has_trunc) {
+    if (has_trunc) {
       cat("Left truncation (L)          : ", object$L, "\n")
       cat("Right truncation (D)         : ", object$D, "\n")
     }
@@ -122,12 +131,12 @@ summary.parfitml <- function(object, ndigits = 3, type = "full", ...) {
     cat("------------------------------------------------------------- \n")
     cat("Parametric model fit (maximum likelihood) \n")
     cat("------------------------------------------------------------- \n")
-    cat("Parametric family    : ", object$fname,"\n")
+    cat("Parametric family    : ", object$fname, "\n")
     cat("Number of parameters : ", object$npars, "\n")
-    if(!dprimary_is_default) {
+    if (!dprimary_is_default) {
       cat("Primary event dist   : ", dprimary_label, "\n")
     }
-    if(has_trunc) {
+    if (has_trunc) {
       cat("Left truncation (L)  : ", object$L, "\n")
       cat("Right truncation (D) : ", object$D, "\n")
     }
@@ -138,10 +147,11 @@ summary.parfitml <- function(object, ndigits = 3, type = "full", ...) {
     print(dfpar)
     cat("------------------------------------------------------------- \n")
     cat("Estimated features:            \n")
-    print(dfdel[1:3,])
+    print(dfdel[1:3, ])
     cat("------------------------------------------------------------- \n")
     cat("point: point estimate; se: standard error \n")
     cat("ci: confidence interval \n")
     cat("------------------------------------------------------------- \n")
   }
 }
+# nolint end

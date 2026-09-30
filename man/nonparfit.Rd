@@ -2,7 +2,8 @@
 % Please edit documentation in R/nonparfit.R
 \name{nonparfit}
 \alias{nonparfit}
-\title{Nonparametric estimation for single interval-censored data based on uniform mixtures}
+\title{Nonparametric estimation for single interval-censored data based on
+uniform mixtures}
 \usage{
 nonparfit(x, Bboot = 1000, pgbar = TRUE)
 }

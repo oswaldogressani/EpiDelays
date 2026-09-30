@@ -24,7 +24,7 @@ The \code{qskewnorm} routine use Owen's (1956)
 computation.
 }
 \examples{
-qskewnorm(p = c(0.1,0.9))
+qskewnorm(p = c(0.1, 0.9))
 
 }
 \references{

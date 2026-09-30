@@ -1,4 +1,5 @@
-#' Nonparametric estimation for single interval-censored data based on uniform mixtures
+#' Nonparametric estimation for single interval-censored data based on
+#' uniform mixtures
 #'
 #' @description
 #' This routine uses a nonparametric methodology based on uniform mixtures
@@ -38,12 +39,12 @@
 #'
 #' @export
 
-nonparfit <- function(x, Bboot = 1000, pgbar = TRUE){
+nonparfit <- function(x, Bboot = 1000, pgbar = TRUE) {
   tic <- proc.time()
   n <- nrow(x)
   nc <- ncol(x)
   if (nc != 2) {
-    stop("Data frame must have 2 columns")
+    stop("Data frame must have 2 columns", call. = FALSE)
   }
   dfck <- kerdata_check(x = x) # data frame check
   if (dfck$result == "fail") {
@@ -53,13 +54,15 @@ nonparfit <- function(x, Bboot = 1000, pgbar = TRUE){
   xr <- x[, 2]
   ninv <- 1 / n
   pfeats <- c(0.01, 0.05, 0.25, 0.50, 0.75, 0.95, 0.99)
-  pointestim <- function(tl, tr) {   # Nonparametric point estimation
+  pointestim <- function(tl, tr) { # Nonparametric point estimation
     tmid <- 0.5 * (tl + tr)
     tw <- tr - tl
-    Fhat <- function(t) ninv * sum((t - tl) / tw * (t >= tl & t <= tr) + (t > tr))
+    Fhat <- function(t) {
+      ninv * sum((t - tl) / tw * (t >= tl & t <= tr) + (t > tr))
+    }
     tord <- sort(c(tl, tr))
     Fhattord <- sapply(tord, Fhat)
-    qfun <- function(p) {# Estimation of p-quantiles
+    qfun <- function(p) { # Estimation of p-quantiles
       pcub <- which(p <= Fhattord)[1]
       t1 <- tord[pcub - 1]
       t2 <- tord[pcub]
@@ -70,34 +73,42 @@ nonparfit <- function(x, Bboot = 1000, pgbar = TRUE){
       return(val)
     }
     mu <- mean(tmid)
-    sd <- sqrt(mean((tl^2 + tl * tr + tr^2) / 3) - mu^2)
+    sdhat <- sqrt(mean((tl^2 + tl * tr + tr^2) / 3) - mu^2)
     qp <- sapply(pfeats, qfun)
-    o <- list(mu = mu, sd = sd, qp = qp)
+    o <- list(mu = mu, sd = sdhat, qp = qp)
     return(o)
   }
   npp <- pointestim(xl, xr)
   npfeat <- c(npp$mu, npp$sd^2, npp$sd, npp$qp)
-  if(isTRUE(pgbar)) {
-    cat(paste0("Nonparametric fit \n",
-               "Bootstrap progress (Bboot=", Bboot, "): \n"))
-    progbar <- utils::txtProgressBar(min = 1, max = Bboot, initial = 1,
-                                     style = 3, char ="*")
+  if (isTRUE(pgbar)) {
+    cat(paste0(
+      "Nonparametric fit \n",
+      "Bootstrap progress (Bboot=", Bboot, "): \n"
+    ))
+    progbar <- utils::txtProgressBar(
+      min = 1, max = Bboot, initial = 1,
+      style = 3, char = "*"
+    )
   }
   fboot <- matrix(0, nrow = Bboot, ncol = length(npfeat))
   for (b in 1:Bboot) {
     xb <- kerboot(x)
     bootest <- pointestim(tl = xb[, 1], tr = xb[, 2])
     fboot[b, ] <- c(bootest$mu, bootest$sd^2, bootest$sd, bootest$qp)
-    if(isTRUE(pgbar)) utils::setTxtProgressBar(progbar, b)
+    if (isTRUE(pgbar)) utils::setTxtProgressBar(progbar, b)
   }
-  if(isTRUE(pgbar)) close(progbar)
+  if (isTRUE(pgbar)) close(progbar)
   feats <- c("mean", "var", "sd", paste0("q", c(1, 5, 25, 50, 75, 95, 99)))
   delayfit <- stats::setNames(vector("list", length(feats)), feats)
-  delayfit <- kerstats(slist = delayfit, pestim = npfeat, method = "boot",
-                       boot = fboot)
+  delayfit <- kerstats(
+    slist = delayfit, pestim = npfeat, method = "boot",
+    boot = fboot
+  )
   toc <- proc.time() - tic
-  o <- list(x = x, n = n, Bboot = Bboot, delayfit = delayfit,
-            censtype = "single", elapsed = toc[3])
+  o <- list(
+    x = x, n = n, Bboot = Bboot, delayfit = delayfit,
+    censtype = "single", elapsed = toc[3]
+  )
   attr(o, "class") <- "nonparfit"
   return(o)
 }

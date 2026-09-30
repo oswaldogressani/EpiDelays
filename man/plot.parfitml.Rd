@@ -2,7 +2,8 @@
 % Please edit documentation in R/S3_plot_parfitml.R
 \name{plot.parfitml}
 \alias{plot.parfitml}
-\title{Plot the density or cumulative distribution function of a fitted parametric model}
+\title{Plot the density or cumulative distribution function of a fitted
+parametric model}
 \usage{
 \method{plot}{parfitml}(x, xlim = NULL, grid = 500L, target = c("pdf", "cdf"), legend = TRUE, ...)
 }

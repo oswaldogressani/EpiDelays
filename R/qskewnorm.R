@@ -19,24 +19,29 @@
 #' \emph{Cambridge University Press}.
 #'
 #' @examples
-#' qskewnorm(p = c(0.1,0.9))
+#' qskewnorm(p = c(0.1, 0.9))
 #'
 #' @export
 
 qskewnorm <- function(p, par1 = 0, par2 = 1, par3 = 0) {
-  if (any(p <= 0) | any(p >= 1))
-    stop("Values in p must be in (0,1)")
+  if (any(p <= 0) || any(p >= 1)) {
+    stop("Values in p must be in (0,1)", call. = FALSE)
+  }
   d3 <- par3 / sqrt(1 + par3^2)
-  mean <- par1 + par2 * d3 * sqrt(2 / pi)
-  sd <- sqrt(par2^2 * (1 - (2 / pi) * d3^2))
-  xpl <- mean - sd * sqrt((1 - p) / p)
-  xpu <- mean + sd * sqrt(p / (1 - p))
-  g <- function(q, prob)
+  mu <- par1 + par2 * d3 * sqrt(2 / pi)
+  sdev <- sqrt(par2^2 * (1 - (2 / pi) * d3^2))
+  xpl <- mu - sdev * sqrt((1 - p) / p)
+  xpu <- mu + sdev * sqrt(p / (1 - p))
+  g <- function(q, prob) {
     pskewnorm(q, par1 = par1, par2 = par2, par3 = par3) - prob
+  }
   xma <- cbind(p, xpl, xpu)
-  frow <- function(r)
-    stats::uniroot(f = g, lower = r[2], upper = r[3], p = r[1],
-                   extendInt = "upX")$root
+  frow <- function(r) {
+    stats::uniroot(
+      f = g, lower = r[2], upper = r[3], p = r[1],
+      extendInt = "upX"
+    )$root
+  }
   o <- apply(xma, 1, frow)
   return(o)
 }

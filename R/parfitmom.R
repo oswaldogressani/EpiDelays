@@ -51,6 +51,7 @@
 #'
 #' @export
 
+# nolint start: cyclocomp_linter.
 parfitmom <- function(x, family, incheck = TRUE, L = -Inf, D = Inf,
                       dprimary = stats::dunif, dprimary_args = list()) {
   # L and D are accepted so parfitml() can forward them, but the moment
@@ -58,13 +59,13 @@ parfitmom <- function(x, family, incheck = TRUE, L = -Inf, D = Inf,
   # `mompoint_ub` is a known-biased optimiser start under non-trivial
   # truncation; parfitml()'s optim call still converges in practice.
   if (!is.numeric(L) || length(L) != 1L || is.na(L)) {
-    stop("L must be a numeric scalar.")
+    stop("L must be a numeric scalar.", call. = FALSE)
   }
   if (!is.numeric(D) || length(D) != 1L || is.na(D) || L >= D) {
-    stop("L must be less than D.")
+    stop("L must be less than D.", call. = FALSE)
   }
-  if(!is.logical(incheck)) {
-    stop("incheck must be either TRUE or FALSE")
+  if (!is.logical(incheck)) {
+    stop("incheck must be either TRUE or FALSE", call. = FALSE)
   } else if (isTRUE(incheck)) {
     # Input checks
     dfck <- kerdata_check(x = x) # data frame check
@@ -92,15 +93,17 @@ parfitmom <- function(x, family, incheck = TRUE, L = -Inf, D = Inf,
     xr <- x$x2r - x$x1r
   }
   y <- 0.5 * (xl + xr)
-  m1 <- mean(y)                   # First sample moment
+  m1 <- mean(y) # First sample moment
   m2 <- (1 / n) * sum((y - m1)^2) # Second sample central moment
   m3 <- (1 / n) * sum((y - m1)^3) # Third sample central moment
-  if(family == "gaussian") {
+  if (family == "gaussian") { # nolint: if_switch_linter.
     par1approx <- m1
     par2approx <- sqrt(m2)
     mompoint_ub <- c(par1approx, log(par2approx))
-    lpout <- list(par1approx = par1approx, par2approx = par2approx,
-                  mompoint_ub = mompoint_ub)
+    lpout <- list(
+      par1approx = par1approx, par2approx = par2approx,
+      mompoint_ub = mompoint_ub
+    )
   } else if (family == "skewnorm") {
     rsn <- 2 * m3 / (4 - pi)
     # Use a signed cube root so negative sample skew does not produce NaN
@@ -119,26 +122,32 @@ parfitmom <- function(x, family, incheck = TRUE, L = -Inf, D = Inf,
     par3approx <- dapprox_clamped / sqrt(1 - dapprox_clamped^2)
     par1approx <- m1 - par2approx * dapprox_clamped * sqrt(2 / pi)
     if (!all(is.finite(c(par1approx, par2approx, par3approx))) ||
-        par2approx <= 0) {
+      par2approx <= 0) {
       par1approx <- m1
       par2approx <- sqrt(max(m2, 1e-6))
       par3approx <- 0
     }
     mompoint_ub <- c(par1approx, log(par2approx), par3approx)
-    lpout <- list(par1approx = par1approx, par2approx = par2approx,
-                  par3approx = par3approx, mompoint_ub = mompoint_ub)
+    lpout <- list(
+      par1approx = par1approx, par2approx = par2approx,
+      par3approx = par3approx, mompoint_ub = mompoint_ub
+    )
   } else if (family == "gamma") {
     par1approx <- (m1^2 / m2)
     par2approx <- m1 / m2
     mompoint_ub <- log(c(par1approx, par2approx))
-    lpout <- list(par1approx = par1approx, par2approx = par2approx,
-                  mompoint_ub = mompoint_ub)
+    lpout <- list(
+      par1approx = par1approx, par2approx = par2approx,
+      mompoint_ub = mompoint_ub
+    )
   } else if (family == "lognormal") {
     par1approx <- 2 * log(m1) - 0.5 * log(m1^2 + m2)
     par2approx <- sqrt(log(1 + m2 / (m1^2)))
     mompoint_ub <- c(par1approx, log(par2approx))
-    lpout <- list(par1approx = par1approx, par2approx = par2approx,
-                  mompoint_ub = mompoint_ub)
+    lpout <- list(
+      par1approx = par1approx, par2approx = par2approx,
+      mompoint_ub = mompoint_ub
+    )
   } else if (family == "weibull") {
     mr <- m2 / m1^2
     f <- function(par1) {
@@ -151,13 +160,18 @@ parfitmom <- function(x, family, incheck = TRUE, L = -Inf, D = Inf,
       flb <- f(lb)
     }
     ub <- lb + 1
-    par1approx <- stats::uniroot(f, lower = lb, upper = ub,
-                                 extendInt = "downX")$root
+    par1approx <- stats::uniroot(f,
+      lower = lb, upper = ub,
+      extendInt = "downX"
+    )$root
     par2approx <- m1 / gamma(1 + 1 / par1approx)
     mompoint_ub <- log(c(par1approx, par2approx))
-    lpout <- list(par1approx = par1approx, par2approx = par2approx,
-                  mompoint_ub = mompoint_ub)
+    lpout <- list(
+      par1approx = par1approx, par2approx = par2approx,
+      mompoint_ub = mompoint_ub
+    )
   }
   o <- c(famdesc, lpout)
   return(o)
 }
+# nolint end
