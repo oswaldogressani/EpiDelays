@@ -16,16 +16,17 @@
 #'
 #' @export
 
-plot.nonparfit <- function(x, xlim = NULL, grid = 500L, legend = TRUE,...){
-  if(!inherits(x, "nonparfit"))
+plot.nonparfit <- function(x, xlim = NULL, grid = 500L, legend = TRUE, ...) {
+  if (!inherits(x, "nonparfit")) {
     stop("x must be a nonparfit object")
+  }
   xl <- x$x[, 1]
   xr <- x$x[, 2]
   xw <- xr - xl
-  if(is.null(xlim)) { # Default domain
+  if (is.null(xlim)) { # Default domain
     xmin <- min(xl)
     xmax <- max(xr)
-  } else{ # User-defined domain
+  } else { # User-defined domain
     xmin <- xlim[1]
     xmax <- xlim[2]
   }
@@ -33,26 +34,29 @@ plot.nonparfit <- function(x, xlim = NULL, grid = 500L, legend = TRUE,...){
   ninv <- 1 / x$n
   Fhat <- function(t) ninv * sum((t - xl) / xw * (t >= xl & t <= xr) + (t > xr))
   dots <- list(...)
-  if(!is.null(dots$col)){
+  if (!is.null(dots$col)) {
     legcol <- dots$col
-  } else{
+  } else {
     legcol <- "black"
   }
-  if(!is.null(dots$lty)){
+  if (!is.null(dots$lty)) {
     leglty <- dots$lty
-  } else{
+  } else {
     leglty <- 1
   }
-  if(!is.null(dots$lwd)){
+  if (!is.null(dots$lwd)) {
     leglwd <- dots$lwd
-  } else{
+  } else {
     leglwd <- 1
   }
-  graphics::plot(x = xx, y = sapply(xx, Fhat),
-       ylab = "Cumulative distribution function",...)
-  if(isTRUE(legend)){
-    graphics::legend("topleft", col = legcol, lty = leglty, lwd = leglwd,
-           "Nonparametric", bty = "n")
+  graphics::plot(
+    x = xx, y = sapply(xx, Fhat),
+    ylab = "Cumulative distribution function", ...
+  )
+  if (isTRUE(legend)) {
+    graphics::legend("topleft",
+      col = legcol, lty = leglty, lwd = leglwd,
+      "Nonparametric", bty = "n"
+    )
   }
 }
-

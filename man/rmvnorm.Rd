@@ -14,16 +14,16 @@ rmvnorm(n = 1, mean, sigma)
 \item{sigma}{The covariance matrix of the multivariate Gaussian distribution.}
 }
 \value{
-A list containing the simulated draws and the method used for 
+A list containing the simulated draws and the method used for
 covariance matrix decomposition.
 }
 \description{
-Simulates random draws from a multivariate normal distribution with mean 
+Simulates random draws from a multivariate normal distribution with mean
 vector \code{mean} and covariance matrix \code{sigma}. The number of draws
-is specfied by \code{n} (a positive integer). The routine first tries to 
+is specfied by \code{n} (a positive integer). The routine first tries to
 compute the Cholesky factorization of the covariance matrix by assuming that
 the latter is a symmetric positive-definite matrix. If this approach fails,
-the routine relies on an eigendecomposition of the covariance matrix as a 
+the routine relies on an eigendecomposition of the covariance matrix as a
 fallback option.
 }
 \references{
