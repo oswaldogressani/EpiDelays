@@ -5,7 +5,16 @@
 \title{Parametric estimation with maximum likelihood for single or doubly
 interval-censored data}
 \usage{
-parfitml(x, family, ci = c("npboot", "pboot", "sbnorm"), ...)
+parfitml(
+  x,
+  family,
+  ci = c("npboot", "pboot", "sbnorm"),
+  L = -Inf,
+  D = Inf,
+  dprimary = stats::dunif,
+  dprimary_args = list(),
+  ...
+)
 }
 \arguments{
 \item{x}{A data frame with either two columns named \code{xl} and \code{xr},
@@ -18,9 +27,29 @@ family. Can be one of the following: \code{"gaussian"}, \code{"gamma"},
 
 \item{ci}{The engine for computing confidence intervals. Default is
 \code{"npboot"} for nonparametric bootstrap. Other options are \code{"pboot"}
-for the parametric bootstrap (currently under construction) or \code{"sbnorm"}
+for the parametric bootstrap (currently under construction) or
+\code{"sbnorm"}
 which relies on a simulation-based approach to compute confidence intervals
 using asymptotic normality of the MLE estimator following Mandel (2013).}
+
+\item{L}{Lower truncation point of the underlying delay distribution.
+Default is \code{-Inf} (no left truncation), matching
+\code{primarycensored}. Must satisfy \code{L < D}. Data are
+assumed to be drawn conditional on the underlying delay lying inside
+\code{[L, D]}; the fitted parameters describe the unconditional delay
+distribution.}
+
+\item{D}{Upper truncation point of the underlying delay distribution.
+Default is \code{Inf}.}
+
+\item{dprimary}{Primary event density function. See
+\code{\link{kerlikelihood}} for details. Defaults to \code{stats::dunif}
+(uniform primary onset), which reproduces the behaviour of earlier
+EpiDelays versions. Non-uniform choices include
+\code{primarycensored::dexpgrowth}.}
+
+\item{dprimary_args}{A named list of additional arguments passed to
+\code{dprimary}. Defaults to an empty list.}
 
 \item{...}{Further arguments. Specifying e.g. \code{Bboot = 1000} permits
 to fix the bootstrap sample size to 1000 (the default is 100 here). Likewise

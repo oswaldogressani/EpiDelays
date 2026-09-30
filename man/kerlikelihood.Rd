@@ -4,7 +4,14 @@
 \alias{kerlikelihood}
 \title{Likelihood function for single and doubly interval-censored data}
 \usage{
-kerlikelihood(x, family)
+kerlikelihood(
+  x,
+  family,
+  L = -Inf,
+  D = Inf,
+  dprimary = stats::dunif,
+  dprimary_args = list()
+)
 }
 \arguments{
 \item{x}{A data frame with either two columns named \code{xl} and \code{xr},
@@ -13,13 +20,41 @@ description for constraints imposed on the columns.}
 
 \item{family}{A character string specifying the name of the parametric
 family.}
+
+\item{L}{Lower truncation point applied to the underlying delay
+distribution. Defaults to \code{-Inf} (no left truncation), matching
+\code{primarycensored}. When \code{L} is finite the per-row
+contribution is rescaled by the truncated CDF.}
+
+\item{D}{Upper truncation point applied to the underlying delay
+distribution. Defaults to \code{Inf}. Together with \code{L}, rows whose
+observed interval is incompatible with \code{[L, D]} are rejected at
+input time.}
+
+\item{dprimary}{Primary event density function. Used only when \code{x} has
+four columns (doubly interval-censored data).
+Must take a vector \code{x} and the arguments \code{min} and \code{max},
+return a density normalised to integrate to 1 on \code{[min, max]}, and be
+compatible with \code{primarycensored::dprimarycensored()}. Defaults to
+\code{stats::dunif} (uniform primary onset within the observation window),
+which reproduces the behaviour of earlier EpiDelays versions. Non-uniform
+choices include \code{primarycensored::dexpgrowth} for exponential growth
+during an outbreak. Ignored when \code{x} has two columns (single
+interval-censored data) but must equal the default in that case.}
+
+\item{dprimary_args}{A named list of additional arguments passed to
+\code{dprimary}, mirroring the \code{dprimary_args} argument of
+\code{primarycensored::dprimarycensored()}. Example: \code{list(r = 0.1)}
+for \code{primarycensored::dexpgrowth}. Defaults to an empty list. Must be
+empty unless \code{x} has four columns.}
 }
 \value{
 A list containing information on the chosen parametric family,
-the log-likelihood function, a function that transforms back the parameters
-in their original scale, and the censoring type. It also
-returns the Jacobian of the inverse of the function that transforms a
-bounded domain to an unbounded domain.
+the log-likelihood function, its pointwise version, a function that
+transforms back the parameters in their original scale, the censoring
+type, and the primary event density settings. It also returns the
+Jacobian of the inverse of the function that transforms a bounded domain
+to an unbounded domain.
 }
 \description{
 The likelihood function plays a key role in maximum likelihood estimation and
@@ -41,11 +76,13 @@ Moreover, \code{NA} values are not allowed in data frame \code{x}.
 Returns the log-likelihood function of parameters that have been transformed
 to live in an unbounded parameter space. This makes the
 maximization/evaluation of the likelihood function numerically more stable.
-The doubly interval-censored likelihood function requires to evaluate an
-inner integral. By default, this is implemented via numerical integration,
-where the integral is evaluated with the \code{integrate} routine. This
-routine also returns a function (logliki) that evaluates the log-likelihood
-pointwise at each datum.
+The doubly interval-censored likelihood function marginalises out the
+primary event time. This marginalisation is delegated to
+\code{primarycensored::dprimarycensored()}, which uses an analytical
+solution where one is available for the given CDF and primary event
+distribution and numerical integration otherwise. This routine also
+returns a function (logliki) that evaluates the log-likelihood pointwise
+at each datum.
 }
 \author{
 Oswaldo Gressani \email{oswaldo_gressani@hotmail.fr}

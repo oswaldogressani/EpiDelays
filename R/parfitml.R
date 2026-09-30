@@ -35,9 +35,25 @@
 #' \code{"lognormal"}, \code{"weibull"}, or \code{"skewnorm"}.
 #' @param ci The engine for computing confidence intervals. Default is
 #' \code{"npboot"} for nonparametric bootstrap. Other options are \code{"pboot"}
-#' for the parametric bootstrap (currently under construction) or \code{"sbnorm"}
+#' for the parametric bootstrap (currently under construction) or
+#' \code{"sbnorm"}
 #' which relies on a simulation-based approach to compute confidence intervals
 #' using asymptotic normality of the MLE estimator following Mandel (2013).
+#' @param L Lower truncation point of the underlying delay distribution.
+#' Default is \code{-Inf} (no left truncation), matching
+#' \code{primarycensored}. Must satisfy \code{L < D}. Data are
+#' assumed to be drawn conditional on the underlying delay lying inside
+#' \code{[L, D]}; the fitted parameters describe the unconditional delay
+#' distribution.
+#' @param D Upper truncation point of the underlying delay distribution.
+#' Default is \code{Inf}.
+#' @param dprimary Primary event density function. See
+#' \code{\link{kerlikelihood}} for details. Defaults to \code{stats::dunif}
+#' (uniform primary onset), which reproduces the behaviour of earlier
+#' EpiDelays versions. Non-uniform choices include
+#' \code{primarycensored::dexpgrowth}.
+#' @param dprimary_args A named list of additional arguments passed to
+#' \code{dprimary}. Defaults to an empty list.
 #' @param ... Further arguments. Specifying e.g. \code{Bboot = 1000} permits
 #' to fix the bootstrap sample size to 1000 (the default is 100 here). Likewise
 #' specifying \code{ns = 1000} permits to fix the number of simulated samples
@@ -61,15 +77,44 @@
 #'
 #' @export
 
-parfitml <- function(x, family, ci = c("npboot", "pboot", "sbnorm"),...){
+# nolint start: cyclocomp_linter.
+parfitml <- function(x, family, ci = c("npboot", "pboot", "sbnorm"),
+                     L = -Inf, D = Inf,
+                     dprimary = stats::dunif, dprimary_args = list(), ...) {
+  # Validate truncation bounds up front, mirroring
+  # primarycensored::.check_truncation_bounds.
+  if (!is.numeric(L) || length(L) != 1L || is.na(L)) {
+    stop("L must be a numeric scalar.", call. = FALSE)
+  }
+  if (!is.numeric(D) || length(D) != 1L || is.na(D) || L >= D) {
+    stop("L must be less than D.", call. = FALSE)
+  }
   tic <- proc.time()
-  m <- kerlikelihood(x = x, family = family)
+  m <- kerlikelihood(
+    x = x, family = family, L = L, D = D,
+    dprimary = dprimary,
+    dprimary_args = dprimary_args
+  )
+  # kerlikelihood drops rows incompatible with [L, D] and returns the
+  # surviving frame. Reuse it so the bootstrap, MoM seed, and reported
+  # sample size all agree on which rows the fit was conditioned on.
+  x <- m$x
   n <- nrow(x)
   np <- m$npars
-  v0 <- parfitmom(x = x, family = family, incheck = FALSE)$mompoint_ub
+  # parfitmom ignores dprimary and L/D; the moment-matching seed is known to
+  # be biased under non-uniform primary or non-trivial truncation, but
+  # Nelder-Mead recovers from moderate bias and keeping MoM primary- and
+  # truncation-unaware avoids family/primary-specific corrections that would
+  # add complexity disproportionate to the benefit.
+  v0 <- parfitmom(
+    x = x, family = family, incheck = FALSE,
+    L = L, D = D
+  )$mompoint_ub
   maxs <- list(fnscale = -1)
-  mle <- stats::optim(par = v0, fn = m$loglik, x = x, control = maxs,
-                      hessian = TRUE)
+  mle <- stats::optim(
+    par = v0, fn = m$loglik, x = x, control = maxs,
+    hessian = TRUE
+  )
   mlepar <- as.numeric(m$originscale(mle$par))
   mlefeat <- as.numeric(kerfeats(family = family, par = mlepar))
   mleconv <- (mle$convergence == 0)
@@ -77,35 +122,38 @@ parfitml <- function(x, family, ci = c("npboot", "pboot", "sbnorm"),...){
   parl <- stats::setNames(vector("list", np), paste0("par", 1:np))
   feats <- c("mean", "var", "sd", paste0("q", c(1, 5, 25, 50, 75, 95, 99)))
   featsl <- stats::setNames(vector("list", length(feats)), feats)
-  if(cimethod == "npboot"){
+  if (cimethod == "npboot") {
     if ("Bboot" %in% ...names()) {
       Bboot <- list(...)$Bboot
-      if (!(is.numeric(Bboot) && Bboot > 0))
-        stop("Bboot must be a positive integer.")
+      if (!(is.numeric(Bboot) && Bboot > 0)) {
+        stop("Bboot must be a positive integer.", call. = FALSE)
+      }
       Bboot <- round(Bboot)
-    } else{
+    } else {
       Bboot <- 100
     }
-    if ("pgbar" %in% ...names()) {
-      if (isTRUE(list(...)$pgbar)) {
-        pgbar <- TRUE
-        cat(paste0("Fitting parametric model (", family, ") \n",
-                   "Bootstrap progress (Bboot=", Bboot, "): \n"))
-        progbar <- utils::txtProgressBar(min = 1, max = Bboot, initial = 1,
-                                         style = 3, char ="*")
-      }
-    } else{
-      pgbar <- FALSE
+    pgbar <- isTRUE(list(...)$pgbar)
+    if (pgbar) {
+      cat(paste0(
+        "Fitting parametric model (", family, ") \n",
+        "Bootstrap progress (Bboot=", Bboot, "): \n"
+      ))
+      progbar <- utils::txtProgressBar(
+        min = 1, max = Bboot, initial = 1,
+        style = 3, char = "*"
+      )
     }
     pboot <- matrix(0, nrow = Bboot, ncol = np)
     fboot <- matrix(0, nrow = Bboot, ncol = length(mlefeat))
     bootdiscard <- 0
-    for(b in 1:Bboot) {
+    for (b in 1:Bboot) {
       bootbconv <- 1
       while (bootbconv != 0) {
         xb <- kerboot(x)
-        mleboot <- stats::optim(par = mle$par, fn = m$loglik, x = xb,
-                                control = maxs)
+        mleboot <- stats::optim(
+          par = mle$par, fn = m$loglik, x = xb,
+          control = maxs
+        )
         if (mleboot$convergence == 0) {
           bootbconv <- 0
         } else {
@@ -113,27 +161,35 @@ parfitml <- function(x, family, ci = c("npboot", "pboot", "sbnorm"),...){
         }
       }
       mleparboot <- as.numeric(m$originscale(mleboot$par))
-      pboot[b,] <- mleparboot
+      pboot[b, ] <- mleparboot
       fboot[b, ] <- as.numeric(kerfeats(family = family, par = mleparboot))
-      if(isTRUE(pgbar)){
+      if (isTRUE(pgbar)) {
         utils::setTxtProgressBar(progbar, b)
       }
     }
-    if(isTRUE(pgbar)){
+    if (isTRUE(pgbar)) {
       close(progbar)
     }
-    parfit <- kerstats(slist = parl, pestim = mlepar, method = "boot",
-                       boot = pboot)
-    delayfit <- kerstats(slist = featsl, pestim = mlefeat, method = "boot",
-                         boot = fboot)
+    parfit <- kerstats(
+      slist = parl, pestim = mlepar, method = "boot",
+      boot = pboot
+    )
+    delayfit <- kerstats(
+      slist = featsl, pestim = mlefeat, method = "boot",
+      boot = fboot
+    )
     ns <- NULL
-  } else if(cimethod == "sbnorm"){
+  } else if (cimethod == "sbnorm") {
     if ("ns" %in% ...names()) {
       ns <- list(...)$ns
-      if (!(is.numeric(ns) && ns > 0))
-        stop("Number of samples for ci must be a positive integer.")
+      if (!(is.numeric(ns) && ns > 0)) {
+        stop(
+          "Number of samples for ci must be a positive integer.",
+          call. = FALSE
+        )
+      }
       ns <- round(ns)
-    } else{
+    } else {
       ns <- 100
     }
     obsFishermle <- (-mle$hessian)
@@ -143,7 +199,7 @@ parfitml <- function(x, family, ci = c("npboot", "pboot", "sbnorm"),...){
     semle <- sqrt(diag(sigmamle))
     psim <- rmvnorm(n = ns, mean = mlepar, sigma = sigmamle)$sim
     err2feats <- list()
-    for(j in 1:ns) {
+    for (j in 1:ns) {
       err2feats[[j]] <- (kerfeats(family = family, par = psim[j, ]) - mlefeat)^2
       cat(sprintf("\r Simulation-based ci: %d/%d.", j, ns))
     }
@@ -157,15 +213,17 @@ parfitml <- function(x, family, ci = c("npboot", "pboot", "sbnorm"),...){
   bic <- np * log(n) - 2 * mle$value
   toc <- proc.time() - tic
 
-  o <- c(m[!names(m) %in% c("loglik", "originscale")],
-         list(n = n, Bboot = Bboot, parfit = parfit, delayfit = delayfit,
-              aic = aic, bic = bic, mleconv = mleconv,
-              bootdiscard = bootdiscard, cimethod = cimethod, ns = ns,
-              xmin = m$xmin, xmax = m$xmax,
-              elapsed = toc[3]))
+  o <- c(
+    m[!names(m) %in% c("loglik", "originscale")],
+    list(
+      n = n, Bboot = Bboot, parfit = parfit, delayfit = delayfit,
+      aic = aic, bic = bic, mleconv = mleconv,
+      bootdiscard = bootdiscard, cimethod = cimethod, ns = ns,
+      xmin = m$xmin, xmax = m$xmax,
+      elapsed = toc[3], L = L, D = D
+    )
+  )
   attr(o, "class") <- "parfitml"
   return(o)
 }
-
-
-
+# nolint end

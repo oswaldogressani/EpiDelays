@@ -3,3 +3,7 @@ EpiDelays.Rproj
 README.Rmd
 
 docs
+
+# Local convenience symlink to primarycensored source for cross-referencing.
+# Not shipped with the package (also in .Rbuildignore).
+/primarycensored

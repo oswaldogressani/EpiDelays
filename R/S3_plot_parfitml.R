@@ -1,4 +1,5 @@
-#' Plot the density or cumulative distribution function of a fitted parametric model
+#' Plot the density or cumulative distribution function of a fitted
+#' parametric model
 #'
 #' @description Can be used to plot the probability density function
 #' or the cumulative distribution function of a parametric model fitted with
@@ -22,50 +23,55 @@
 
 plot.parfitml <- function(x, xlim = NULL, grid = 500L,
                           target = c("pdf", "cdf"), legend = TRUE, ...) {
-  if(!inherits(x, "parfitml"))
-    stop("x must be a parfitml object")
+  if (!inherits(x, "parfitml")) {
+    stop("x must be a parfitml object", call. = FALSE)
+  }
   tartype <- match.arg(target)
-  if(is.null(xlim)) { # Default domain
+  if (is.null(xlim)) { # Default domain
     xmin <- x$xmin
     xmax <- x$xmax
-  } else{ # User-defined domain
+  } else { # User-defined domain
     xmin <- xlim[1]
     xmax <- xlim[2]
   }
   xx <- seq(xmin, xmax, length = grid)
   parvals <- unname(as.list(sapply(x$parfit, `[[`, 1)))
   dots <- list(...)
-  if(!is.null(dots$col)){
+  if (!is.null(dots$col)) {
     legcol <- dots$col
-  } else{
+  } else {
     legcol <- "black"
   }
-  if(!is.null(dots$lty)){
+  if (!is.null(dots$lty)) {
     leglty <- dots$lty
-  } else{
+  } else {
     leglty <- 1
   }
-  if(!is.null(dots$lwd)){
+  if (!is.null(dots$lwd)) {
     leglwd <- dots$lwd
-  } else{
+  } else {
     leglwd <- 1
   }
-  if(tartype == "pdf"){
+  if (tartype == "pdf") {
     tarname <- x$dname
-    eval <- c(list(x = xx), parvals)
+    evalargs <- c(list(x = xx), parvals)
     legpos <- "topright"
-  } else{
+  } else {
     tarname <- x$pname
-    eval <- c(list(q = xx), parvals)
+    evalargs <- c(list(q = xx), parvals)
     legpos <- "topleft"
   }
-  if(x$fname == "skewnorm"){
-    graphics::plot(xx, do.call(get(paste0(tarname)), eval),...)
-  } else{
-    graphics::plot(xx, do.call(get(paste0(tarname), asNamespace("stats")), eval),...)
+  if (x$fname == "skewnorm") {
+    graphics::plot(xx, do.call(get(paste0(tarname)), evalargs), ...)
+  } else {
+    graphics::plot(
+      xx, do.call(get(paste0(tarname), asNamespace("stats")), evalargs), ...
+    )
   }
-  if(isTRUE(legend)){
-    graphics::legend(legpos, col = legcol, lty = leglty, lwd = leglwd,
-           x$fname, bty = "n")
+  if (isTRUE(legend)) {
+    graphics::legend(legpos,
+      col = legcol, lty = leglty, lwd = leglwd,
+      x$fname, bty = "n"
+    )
   }
 }

@@ -20,96 +20,239 @@
 #' Returns the log-likelihood function of parameters that have been transformed
 #' to live in an unbounded parameter space. This makes the
 #' maximization/evaluation of the likelihood function numerically more stable.
-#' The doubly interval-censored likelihood function requires to evaluate an
-#' inner integral. By default, this is implemented via numerical integration,
-#' where the integral is evaluated with the \code{integrate} routine. This
-#' routine also returns a function (logliki) that evaluates the log-likelihood
-#' pointwise at each datum.
+#' The doubly interval-censored likelihood function marginalises out the
+#' primary event time. This marginalisation is delegated to
+#' \code{primarycensored::dprimarycensored()}, which uses an analytical
+#' solution where one is available for the given CDF and primary event
+#' distribution and numerical integration otherwise. This routine also
+#' returns a function (logliki) that evaluates the log-likelihood pointwise
+#' at each datum.
 #'
 #' @param x A data frame with either two columns named \code{xl} and \code{xr},
 #' or four columns named \code{x1l}, \code{x1r}, \code{x2l}, \code{x2r}. See
 #' description for constraints imposed on the columns.
 #' @param family A character string specifying the name of the parametric
 #' family.
+#' @param L Lower truncation point applied to the underlying delay
+#' distribution. Defaults to \code{-Inf} (no left truncation), matching
+#' \code{primarycensored}. When \code{L} is finite the per-row
+#' contribution is rescaled by the truncated CDF.
+#' @param D Upper truncation point applied to the underlying delay
+#' distribution. Defaults to \code{Inf}. Together with \code{L}, rows whose
+#' observed interval is incompatible with \code{[L, D]} are rejected at
+#' input time.
+#' @param dprimary Primary event density function. Used only when \code{x} has
+#' four columns (doubly interval-censored data).
+#' Must take a vector \code{x} and the arguments \code{min} and \code{max},
+#' return a density normalised to integrate to 1 on \code{[min, max]}, and be
+#' compatible with \code{primarycensored::dprimarycensored()}. Defaults to
+#' \code{stats::dunif} (uniform primary onset within the observation window),
+#' which reproduces the behaviour of earlier EpiDelays versions. Non-uniform
+#' choices include \code{primarycensored::dexpgrowth} for exponential growth
+#' during an outbreak. Ignored when \code{x} has two columns (single
+#' interval-censored data) but must equal the default in that case.
+#' @param dprimary_args A named list of additional arguments passed to
+#' \code{dprimary}, mirroring the \code{dprimary_args} argument of
+#' \code{primarycensored::dprimarycensored()}. Example: \code{list(r = 0.1)}
+#' for \code{primarycensored::dexpgrowth}. Defaults to an empty list. Must be
+#' empty unless \code{x} has four columns.
 #'
 #' @return A list containing information on the chosen parametric family,
-#' the log-likelihood function, a function that transforms back the parameters
-#' in their original scale, and the censoring type. It also
-#' returns the Jacobian of the inverse of the function that transforms a
-#' bounded domain to an unbounded domain.
+#' the log-likelihood function, its pointwise version, a function that
+#' transforms back the parameters in their original scale, the censoring
+#' type, and the primary event density settings. It also returns the
+#' Jacobian of the inverse of the function that transforms a bounded domain
+#' to an unbounded domain.
 #'
 #' @author Oswaldo Gressani \email{oswaldo_gressani@hotmail.fr}
 #'
 #' @keywords internal
 
-kerlikelihood <- function(x, family) {
+kerlikelihood <- function(x, family, # nolint: cyclocomp_linter.
+                          L = -Inf, D = Inf,
+                          dprimary = stats::dunif,
+                          dprimary_args = list()) {
+  if (!is.numeric(L) || length(L) != 1L || is.na(L)) {
+    stop("L must be a numeric scalar.", call. = FALSE)
+  }
+  if (!is.numeric(D) || length(D) != 1L || is.na(D) || L >= D) {
+    stop("L must be less than D.", call. = FALSE)
+  }
+  if (!is.function(dprimary)) {
+    stop("dprimary must be a function", call. = FALSE)
+  }
+  if (!is.list(dprimary_args) ||
+     (length(dprimary_args) > 0 && is.null(names(dprimary_args)))) {
+    stop("dprimary_args must be a named list", call. = FALSE)
+  }
+  dprimary_default <- identical(dprimary, stats::dunif) &&
+    length(dprimary_args) == 0
   # Input checks
   dfck <- kerdata_check(x = x) # data frame check
     if (dfck$result == "fail") {
-      stop(dfck$message)
+      stop(dfck$message, call. = FALSE)
     }
   famck <- kerfamily_check(x = family) # family check
     if (famck$result == "fail") {
-      stop(famck$message)
+      stop(famck$message, call. = FALSE)
     }
   domck <- kerdomain_check(x = x, family = family) # Domain check
   if (domck$result == "fail") {
-    stop(domck$message)
+    stop(domck$message, call. = FALSE)
   }
   fset <- kerfamilies()
   fnames <- sapply(fset, "[[", "fname")
   famdesc <- fset[[match(family, fnames)]]
-  n <- nrow(x)
   nc <- ncol(x)
-  if(nc == 2) {
+  if (nc == 2) {
     censtype <- "single"
+    # Non-uniform primary has no meaning without a primary event window.
+    if (!dprimary_default) {
+      stop(
+        "dprimary only applies to doubly interval-censored data (four ",
+        "columns); x has two columns so no primary event window is ",
+        "modelled",
+        call. = FALSE
+      )
+    }
+    # Rows straddling [L, D] cannot be modelled, so drop them with a warning.
+    if (is.finite(L) || is.finite(D)) {
+      keep <- x$xl >= L & x$xr <= D
+      if (!all(keep)) {
+        warning(
+          sum(!keep), " row(s) of x straddle or fall outside the truncation ",
+          "bounds [L, D] and have been dropped. Each row's interval ",
+          "[xl, xr] must satisfy xl >= L and xr <= D. To retain these ",
+          "observations, narrow their intervals before calling the fit.",
+          call. = FALSE
+        )
+        x <- x[keep, , drop = FALSE]
+        if (nrow(x) == 0L) {
+          stop(
+            "No rows of x remain after dropping observations incompatible ",
+            "with the truncation bounds [L, D].",
+            call. = FALSE
+          )
+        }
+      }
+    }
     xmin <- min(x$xl)
     xmax <- max(x$xr)
   } else if (nc == 4) {
     censtype <- "double"
-    d1 <- x$x2r - x$x1l
-    d2 <- x$x2r - x$x1r
-    d3 <- x$x2l - x$x1l
-    d4 <- x$x2l - x$x1r
-    xmin <- min(d4)
-    xmax <- max(d1)
-    logdx1 <- log(x$x1r - x$x1l)
+    # primarycensored needs each secondary window inside [L, D], so drop
+    # straddling rows with a warning.
+    if (is.finite(L) || is.finite(D)) {
+      lowers <- x$x2l - x$x1l
+      uppers <- x$x2r - x$x1l
+      keep <- lowers >= L & uppers <= D
+      if (!all(keep)) {
+        warning(
+          sum(!keep), " row(s) of x straddle or fall outside the truncation ",
+          "bounds [L, D] and have been dropped. Each row's secondary window ",
+          "must satisfy x2l - x1l >= L and x2r - x1l <= D. To retain these ",
+          "observations, narrow their secondary windows before calling the ",
+          "fit.",
+          call. = FALSE
+        )
+        x <- x[keep, , drop = FALSE]
+        if (nrow(x) == 0L) {
+          stop(
+            "No rows of x remain after dropping observations incompatible ",
+            "with the truncation bounds [L, D].",
+            call. = FALSE
+          )
+        }
+      }
+    }
+    # Shortest and longest delays compatible with the observed windows.
+    xmin <- min(x$x2l - x$x1r)
+    xmax <- max(x$x2r - x$x1l)
   }
-  if (family == "gaussian") {
-    if(nc == 2) {
+  # Per-row single interval-censored loglik, truncated to [L, D].
+  single_interval_i <- function(Fl, Fr, FL, FD) {
+    if (is.infinite(L) && is.infinite(D)) {
+      return(log(Fr - Fl))
+    }
+    num <- pmin(Fr, FD) - pmax(Fl, FL)
+    log(num) - log(FD - FL)
+  }
+  # Pointwise loglik for doubly interval-censored data via primarycensored.
+  # Rows are grouped by (pwindow, swindow) and evaluated at each group's
+  # unique lower bounds. The grouping is cached per x as optim reuses x.
+  build_pc_logliki <- function(pdist, pars_fn) {
+    force(pdist)
+    force(pars_fn)
+    state <- new.env(parent = emptyenv())
+    prepare <- function(x) {
+      pwindows <- x$x1r - x$x1l
+      swindows <- x$x2r - x$x2l
+      lowers <- x$x2l - x$x1l
+      upw <- unique(pwindows)
+      usw <- unique(swindows)
+      key <- match(pwindows, upw) +
+        length(upw) * (match(swindows, usw) - 1L)
+      lapply(split(seq_along(key), key), function(r) {
+        lower <- lowers[r]
+        ulower <- unique(lower)
+        list(
+          rows = r, pwindow = pwindows[r[1]], swindow = swindows[r[1]],
+          lower = ulower, map = match(lower, ulower)
+        )
+      })
+    }
+    function(v, x) {
+      pars <- pars_fn(v)
+      if (!identical(x, state$x)) {
+        assign("prep", prepare(x), envir = state)
+        assign("x", x, envir = state)
+      }
+      if (is.null(state$pcens)) {
+        # Check pdist and dprimary once, then reuse the object.
+        do.call(primarycensored::check_pdist, c(list(pdist, D = D), pars))
+        for (g in state$prep) {
+          primarycensored::check_dprimary(dprimary, g$pwindow, dprimary_args)
+        }
+        obj <- do.call(
+          primarycensored::new_pcens,
+          c(
+            list(
+              pdist = pdist, dprimary = dprimary,
+              primary_args = dprimary_args
+            ),
+            pars
+          )
+        )
+      } else {
+        obj <- do.call(stats::update, c(list(state$pcens), pars))
+      }
+      assign("pcens", obj, envir = state)
+      z <- numeric(nrow(x))
+      for (g in state$prep) {
+        z[g$rows] <- primarycensored::pcens_pmf(
+          obj, g$lower, g$pwindow,
+          swindow = g$swindow, L = L, D = D, log = TRUE
+        )[g$map]
+      }
+      z
+    }
+  }
+  if (family == "gaussian") { # nolint: if_switch_linter.
+    if (nc == 2) {
       logliki <- function(v, x) {
         par1 <- v[1]
         par2 <- exp(v[2])
         Fl  <- stats::pnorm(q = x$xl, mean = par1, sd = par2)
         Fr  <- stats::pnorm(q = x$xr, mean = par1, sd = par2)
-        z <- log(Fr - Fl)
-        return(z)
+        FL  <- stats::pnorm(q = L, mean = par1, sd = par2)
+        FD  <- stats::pnorm(q = D, mean = par1, sd = par2)
+        single_interval_i(Fl, Fr, FL, FD)
       }
-    } else if(nc == 4) {
-      logliki <- function(v, x){
-        par1 <- v[1]
-        par2 <- exp(v[2])
-        G <- function(u){
-          z <- (u - par1) / par2
-          o <- (u - par1) * stats::pnorm(z) + par2 * stats::dnorm(z)
-          return(o)
-        }
-        I <- G(d1) - G(d2) - G(d3) + G(d4)
-        intfback <- which(I <= 0)
-        if(length(intfback) > 0L){
-          for(i in intfback) {
-            h <- function(x1) {
-              Fl  <- stats::pnorm(q = x$x2l[i] - x1 , mean = par1, sd = par2)
-              Fr  <- stats::pnorm(q = x$x2r[i] - x1 , mean = par1, sd = par2)
-              hval <- Fr - Fl
-              return(hval)
-            }
-            I[i]<- stats::integrate(h, lower = x$x1l[i], upper = x$x1r[i])$value
-          }
-        }
-        z <- log(I) - logdx1
-        return(z)
-      }
+    } else if (nc == 4) {
+      logliki <- build_pc_logliki(
+        pdist = stats::pnorm,
+        pars_fn = function(v) list(mean = v[1], sd = exp(v[2]))
+      )
     }
     originscale <- function(v) {
       z <- data.frame(v[1], exp(v[2]))
@@ -121,47 +264,24 @@ kerlikelihood <- function(x, family) {
       return(o)
     }
   } else if (family == "skewnorm") {
-    if(nc == 2) {
+    if (nc == 2) {
       logliki <- function(v, x) { # v: unbounded parameter
         par1 <- v[1]
         par2 <- exp(v[2])
         par3 <- v[3]
         Fl <- pskewnorm(q = x$xl, par1 = par1, par2 = par2, par3 = par3)
         Fr <- pskewnorm(q = x$xr, par1 = par1, par2 = par2, par3 = par3)
-        z   <- log(Fr - Fl)
-        return(z)
+        FL <- pskewnorm(q = L, par1 = par1, par2 = par2, par3 = par3)
+        FD <- pskewnorm(q = D, par1 = par1, par2 = par2, par3 = par3)
+        single_interval_i(Fl, Fr, FL, FD)
       }
-    } else if(nc == 4) {
-      rpi <- sqrt(2 / pi)
-      logliki <- function(v, x) {
-          par1 <- v[1]
-          par2 <- exp(v[2])
-          par3 <- v[3]
-          G <- function(u){
-            z1 <- (u - par1) / par2
-            z3 <- sqrt(1 + par3^2)
-            z2 <- par3 / z3
-            o <- (u - par1) * pskewnorm(u, par1 = par1, par2 = par2, par3 = par3) +
-              2 * par2 * stats::dnorm(z1) * stats::pnorm(par3 * z1) -
-              par2 * rpi * z2 * stats::pnorm(z3 * z1)
-            return(o)
-          }
-          I <- G(d1) - G(d2) - G(d3) + G(d4)
-          intfback <- which(I <= 0)
-          if(length(intfback) > 0L){
-            for(i in intfback) {
-              h <- function(x1) {
-              Fl <- pskewnorm(q = x$x2l[i] - x1, par1 = par1, par2 = par2, par3 = par3)
-              Fr <- pskewnorm(q = x$x2r[i] - x1, par1 = par1, par2 = par2, par3 = par3)
-              hval <- Fr - Fl
-              return(hval)
-              }
-              I[i] <- stats::integrate(h, lower = x$x1l[i], upper = x$x1r[i])$value
-            }
-          }
-          z <- log(I) - logdx1
-          return(z)
-      }
+    } else if (nc == 4) {
+      logliki <- build_pc_logliki(
+        pdist = pskewnorm,
+        pars_fn = function(v) {
+          list(par1 = v[1], par2 = exp(v[2]), par3 = v[3])
+        }
+      )
     }
     originscale <- function(v) {
       z <- data.frame(v[1], exp(v[2]), v[3])
@@ -173,45 +293,21 @@ kerlikelihood <- function(x, family) {
       return(o)
     }
   } else if (family == "gamma") {
-    if(nc == 2) {
+    if (nc == 2) {
       logliki <- function(v, x) {
         par1 <- exp(v[1])
         par2 <- exp(v[2])
         Fl  <- stats::pgamma(q = x$xl, shape = par1, rate = par2)
         Fr  <- stats::pgamma(q = x$xr, shape = par1, rate = par2)
-        z   <- log(Fr - Fl)
-        return(z)
+        FL  <- stats::pgamma(q = L, shape = par1, rate = par2)
+        FD  <- stats::pgamma(q = D, shape = par1, rate = par2)
+        single_interval_i(Fl, Fr, FL, FD)
       }
-    } else if(nc == 4) {
-      logliki <- function(v, x) { # v: unbounded parameter
-          par1 <- exp(v[1])
-          par2 <- exp(v[2])
-          G <- function(u){
-            o <- numeric(length(u))
-            sp <- (u > 0)
-            if(any(sp)){
-              usp <- u[sp]
-              o[sp] <- usp * stats::pgamma(usp, shape = par1, rate = par2) -
-                (par1/par2) * stats::pgamma(usp, shape = par1 + 1, rate = par2)
-            }
-            return(o)
-          }
-          I <- G(d1) - G(d2) - G(d3) + G(d4)
-          intfback <- which(I <= 0)
-          if(length(intfback) > 0L){
-            for(i in intfback) {
-              h <- function(x1) {
-                Fl  <- stats::pgamma(q = x$x2l[i] - x1, shape = par1, rate = par2)
-                Fr  <- stats::pgamma(q = x$x2r[i] - x1, shape = par1, rate = par2)
-                hval <- Fr - Fl
-                return(hval)
-              }
-              I[i] <- stats::integrate(h, lower = x$x1l[i], upper = x$x1r[i])$value
-            }
-          }
-          z <- log(I) - logdx1
-          return(z)
-      }
+    } else if (nc == 4) {
+      logliki <- build_pc_logliki(
+        pdist = stats::pgamma,
+        pars_fn = function(v) list(shape = exp(v[1]), rate = exp(v[2]))
+      )
     }
     originscale <- function(v) {
       z <- data.frame(exp(v[1]), exp(v[2]))
@@ -219,51 +315,25 @@ kerlikelihood <- function(x, family) {
       return(z)
     }
     J <- function(v) {
-      o <- diag(c(exp(v[1]), exp(v[2])))
+      o <- diag(exp(v[1:2]))
       return(o)
     }
   } else if (family == "lognormal") {
-    if(nc == 2) {
+    if (nc == 2) {
       logliki <- function(v, x) { # v: unbounded parameter
         par1 <- v[1]
         par2 <- exp(v[2])
         Fl  <- stats::plnorm(q = x$xl, meanlog = par1, sdlog = par2)
         Fr  <- stats::plnorm(q = x$xr, meanlog = par1, sdlog = par2)
-        z   <- log(Fr - Fl)
-        return(z)
+        FL  <- stats::plnorm(q = L, meanlog = par1, sdlog = par2)
+        FD  <- stats::plnorm(q = D, meanlog = par1, sdlog = par2)
+        single_interval_i(Fl, Fr, FL, FD)
       }
-    } else if(nc == 4) {
-      logliki <- function(v, x) {
-          par1 <- v[1]
-          par2 <- exp(v[2])
-          G <- function(u){
-            o <- numeric(length(u))
-            sp <- (u > 0)
-            if(any(sp)){
-              usp <- u[sp]
-              z1 <- (log(usp) - par1) / par2
-              z2 <- (log(usp) - par1 - par2^2) / par2
-              o[sp] <- usp * stats::pnorm(z1) - exp(par1 + 0.5 * par2^2) *
-                stats::pnorm(z2)
-            }
-            return(o)
-          }
-          I <- G(d1) - G(d2) - G(d3) + G(d4)
-          intfback <- which(I <= 0)
-          if(length(intfback) > 0L){
-            for(i in intfback) {
-              h <- function(x1) {
-                Fl  <- stats::plnorm(q = x$x2l[i] - x1, meanlog = par1, sdlog = par2)
-                Fr  <- stats::plnorm(q = x$x2r[i] - x1, meanlog = par1, sdlog = par2)
-                hval <- Fr - Fl
-                return(hval)
-              }
-              I[i] <- stats::integrate(h, lower = x$x1l[i], upper = x$x1r[i])$value
-            }
-          }
-          z <- log(I) - logdx1
-          return(z)
-      }
+    } else if (nc == 4) {
+      logliki <- build_pc_logliki(
+        pdist = stats::plnorm,
+        pars_fn = function(v) list(meanlog = v[1], sdlog = exp(v[2]))
+      )
     }
     originscale <- function(v) {
       z <- data.frame(v[1], exp(v[2]))
@@ -275,47 +345,21 @@ kerlikelihood <- function(x, family) {
       return(o)
     }
   } else if (family == "weibull") {
-    if(nc == 2) {
+    if (nc == 2) {
       logliki <- function(v, x) { # v: unbounded parameter
         par1 <- exp(v[1])
         par2 <- exp(v[2])
         Fl  <- stats::pweibull(q = x$xl, shape = par1, scale = par2)
         Fr  <- stats::pweibull(q = x$xr, shape = par1, scale = par2)
-        z   <- log(Fr - Fl)
-        return(z)
+        FL  <- stats::pweibull(q = L, shape = par1, scale = par2)
+        FD  <- stats::pweibull(q = D, shape = par1, scale = par2)
+        single_interval_i(Fl, Fr, FL, FD)
       }
-    } else if(nc == 4) {
-      logliki <- function(v, x) {
-          par1 <- exp(v[1])
-          par2 <- exp(v[2])
-          G <- function(u){
-            o <- numeric(length(u))
-            sp <- (u > 0)
-            if(any(sp)){
-              usp <- u[sp]
-              z1 <- 1 + 1 / par1
-              z2 <- (usp / par2)^par1
-              o[sp] <- usp * stats::pweibull(usp, shape = par1, scale = par2) -
-                par2 * gamma(z1) * stats::pgamma(z2, shape = z1)
-            }
-            return(o)
-          }
-          I <- G(d1) - G(d2) - G(d3) + G(d4)
-          intfback <- which(I <= 0)
-          if(length(intfback) > 0L){
-            for(i in intfback) {
-               h <- function(x1) {
-                Fl  <- stats::pweibull(q = x$x2l[i] - x1, shape = par1, scale = par2)
-                Fr  <- stats::pweibull(q = x$x2r[i] - x1, shape = par1, scale = par2)
-                hval <- Fr - Fl
-                return(hval)
-              }
-              I[i] <- stats::integrate(h, lower = x$x1l[i], upper = x$x1r[i])$value
-            }
-          }
-          z <- log(I) - logdx1
-          return(z)
-      }
+    } else if (nc == 4) {
+      logliki <- build_pc_logliki(
+        pdist = stats::pweibull,
+        pars_fn = function(v) list(shape = exp(v[1]), scale = exp(v[2]))
+      )
     }
     originscale <- function(v) {
       z <- data.frame(exp(v[1]), exp(v[2]))
@@ -323,7 +367,7 @@ kerlikelihood <- function(x, family) {
       return(z)
     }
     J <- function(v) {
-      o <- diag(c(exp(v[1]), exp(v[2])))
+      o <- diag(exp(v[1:2]))
       return(o)
     }
   }
@@ -333,8 +377,8 @@ kerlikelihood <- function(x, family) {
   }
   o <- c(famdesc, list(logliki = logliki, loglik = loglik,
                        originscale = originscale, censtype = censtype, J = J,
-                       xmin = xmin, xmax = xmax))
+                       xmin = xmin, xmax = xmax,
+                       dprimary = dprimary, dprimary_args = dprimary_args,
+                       x = x))
   return(o)
 }
-
-

@@ -25,5 +25,15 @@
 pskewnorm <- function(q, par1 = 0, par2 = 1, par3 = 0) {
   z <- (q - par1) / par2
   o <- stats::pnorm(z) - 2 * sapply(z, kerTOw, a = par3)
-  return(o)
+  # Owen's T can return values a hair outside [0, 1] in extreme parameter
+  # regions (large |slant| or deep tails), and floating-point noise can leave
+  # the returned vector slightly non-monotone in q. A CDF must satisfy both,
+  # so we clamp into [0, 1] and lift any rounding-noise dips with cummax over
+  # the order of q. primarycensored::check_pdist enforces both properties on
+  # any pdist passed to dprimarycensored() and would otherwise abort during
+  # an optim step that visits the saturation region.
+  o <- pmin(1, pmax(0, o))
+  ord <- order(q)
+  o[ord] <- cummax(o[ord])
+  o
 }
