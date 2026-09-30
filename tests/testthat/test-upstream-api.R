@@ -1,6 +1,4 @@
-# Tests that the upstream EpiDelays API (pointwise logliki, Jacobian J,
-# xmin / xmax, ci = "sbnorm" and plot methods) composes with the
-# primarycensored backend, truncation and non-uniform primary events.
+# Upstream API (logliki, J, xmin/xmax, sbnorm, plot) with our backend.
 
 api_cases <- list(
   gaussian = list(v = c(1.5, log(0.8))),
@@ -10,8 +8,7 @@ api_cases <- list(
   skewnorm = list(v = c(1, log(1), 2))
 )
 
-# Rows with two distinct primary windows interleaved, so the grouped
-# dprimarycensored calls must write results back in the original row order.
+# Interleaved primary windows, to check results keep row order.
 mixed_window_data <- function() {
   data.frame(
     x1l = c(0, 1, 2, 3, 4, 5),
@@ -37,7 +34,6 @@ for (fam in names(api_cases)) {
       li <- m$logliki(v, x)
       expect_length(li, nrow(x))
       expect_identical(sum(li), m$loglik(v, x))
-      # Each row on its own must give the same contribution.
       by_row <- vapply(seq_len(nrow(x)), function(i) {
         m$loglik(v, x[i, , drop = FALSE])
       }, numeric(1))
@@ -130,3 +126,98 @@ test_that("pskewnorm takes q and stays a valid CDF when saturated", {
   expect_true(all(p >= 0 & p <= 1))
   expect_false(is.unsorted(p[order(q)]))
 })
+
+test_that("logliki gives fresh results when x changes between calls", {
+  skip_if_no_primarycensored()
+  # The bootstrap passes resampled frames to the same closure.
+  x <- mixed_window_data()
+  m <- kerlikelihood(x = x, family = "gamma")
+  v <- log(c(2, 0.5))
+  first <- m$logliki(v, x)
+  xb <- x[c(6, 1, 1, 3), ]
+  expect_equal(
+    m$logliki(v, xb),
+    kerlikelihood(x = xb, family = "gamma")$logliki(v, xb),
+    tolerance = 1e-12
+  )
+  expect_identical(m$logliki(v, x), first)
+  expect_equal(
+    first, kerlikelihood(x = x, family = "gamma")$logliki(v, x),
+    tolerance = 1e-12
+  )
+})
+
+test_that("logliki handles duplicated rows and parameter changes", {
+  skip_if_no_primarycensored()
+  x <- mixed_window_data()[c(1, 2, 1, 4, 2, 2, 6, 5, 3), ]
+  m <- kerlikelihood(x = x, family = "weibull", L = 1, D = 25)
+  for (v in list(log(c(2, 2)), log(c(1.2, 5)), log(c(3, 1.5)))) {
+    expected <- vapply(seq_len(nrow(x)), function(i) {
+      primarycensored::dprimarycensored(
+        x = x$x2l[i] - x$x1l[i], pdist = stats::pweibull,
+        pwindow = x$x1r[i] - x$x1l[i], swindow = x$x2r[i] - x$x2l[i],
+        L = 1, D = 25, shape = exp(v[1]), scale = exp(v[2]), log = TRUE
+      )
+    }, numeric(1))
+    expect_equal(m$logliki(v, x), expected, tolerance = 1e-12)
+  }
+})
+
+oracle_cases <- list(
+  gaussian = list(
+    pdist = stats::pnorm, pars = function(v) list(mean = v[1], sd = exp(v[2]))
+  ),
+  gamma = list(
+    pdist = stats::pgamma,
+    pars = function(v) list(shape = exp(v[1]), rate = exp(v[2]))
+  ),
+  lognormal = list(
+    pdist = stats::plnorm,
+    pars = function(v) list(meanlog = v[1], sdlog = exp(v[2]))
+  ),
+  weibull = list(
+    pdist = stats::pweibull,
+    pars = function(v) list(shape = exp(v[1]), scale = exp(v[2]))
+  ),
+  skewnorm = list(
+    pdist = pskewnorm,
+    pars = function(v) list(par1 = v[1], par2 = exp(v[2]), par3 = v[3])
+  )
+)
+bounds <- list(l_only = c(1, Inf), d_only = c(-Inf, 20), both = c(1, 20))
+primaries <- list(
+  uniform = list(d = stats::dunif, args = list()),
+  expgrowth = list(d = primarycensored::dexpgrowth, args = list(r = 0.3))
+)
+
+for (fam in names(oracle_cases)) {
+  for (b in names(bounds)) {
+    for (pr in names(primaries)) {
+      local({
+        family <- fam
+        oc <- oracle_cases[[family]]
+        lims <- bounds[[b]]
+        prim <- primaries[[pr]]
+        test_that(sprintf("%s logliki matches dprimarycensored (%s, %s)",
+                          family, b, pr), {
+          skip_if_no_primarycensored()
+          x <- mixed_window_data()
+          v <- api_cases[[family]]$v
+          m <- kerlikelihood(
+            x = x, family = family, L = lims[1], D = lims[2],
+            dprimary = prim$d, dprimary_args = prim$args
+          )
+          expected <- vapply(seq_len(nrow(x)), function(i) {
+            do.call(primarycensored::dprimarycensored, c(list(
+              x = x$x2l[i] - x$x1l[i], pdist = oc$pdist,
+              pwindow = x$x1r[i] - x$x1l[i], swindow = x$x2r[i] - x$x2l[i],
+              L = lims[1], D = lims[2], dprimary = prim$d,
+              primary_args = prim$args, log = TRUE
+            ), oc$pars(v)))
+          }, numeric(1))
+          expect_equal(m$logliki(v, x), expected, tolerance = 1e-10)
+        })
+      })
+    }
+  }
+}

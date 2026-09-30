@@ -68,59 +68,54 @@
 #'
 #' @keywords internal
 
-kerlikelihood <- function(x, family, L = -Inf, D = Inf,
+kerlikelihood <- function(x, family, # nolint: cyclocomp_linter.
+                          L = -Inf, D = Inf,
                           dprimary = stats::dunif,
                           dprimary_args = list()) {
-  # Truncation bound validation mirrors
-  # primarycensored::.check_truncation_bounds.
   if (!is.numeric(L) || length(L) != 1L || is.na(L)) {
-    stop("L must be a numeric scalar.")
+    stop("L must be a numeric scalar.", call. = FALSE)
   }
   if (!is.numeric(D) || length(D) != 1L || is.na(D) || L >= D) {
-    stop("L must be less than D.")
+    stop("L must be less than D.", call. = FALSE)
   }
-  if(!is.function(dprimary)) {
-    stop("dprimary must be a function")
+  if (!is.function(dprimary)) {
+    stop("dprimary must be a function", call. = FALSE)
   }
-  if(!is.list(dprimary_args) ||
+  if (!is.list(dprimary_args) ||
      (length(dprimary_args) > 0 && is.null(names(dprimary_args)))) {
-    stop("dprimary_args must be a named list")
+    stop("dprimary_args must be a named list", call. = FALSE)
   }
   dprimary_default <- identical(dprimary, stats::dunif) &&
     length(dprimary_args) == 0
   # Input checks
   dfck <- kerdata_check(x = x) # data frame check
     if (dfck$result == "fail") {
-      stop(dfck$message)
+      stop(dfck$message, call. = FALSE)
     }
   famck <- kerfamily_check(x = family) # family check
     if (famck$result == "fail") {
-      stop(famck$message)
+      stop(famck$message, call. = FALSE)
     }
   domck <- kerdomain_check(x = x, family = family) # Domain check
   if (domck$result == "fail") {
-    stop(domck$message)
+    stop(domck$message, call. = FALSE)
   }
   fset <- kerfamilies()
   fnames <- sapply(fset, "[[", "fname")
   famdesc <- fset[[match(family, fnames)]]
   nc <- ncol(x)
-  if(nc == 2) {
+  if (nc == 2) {
     censtype <- "single"
     # Non-uniform primary has no meaning without a primary event window.
-    if(!dprimary_default) {
+    if (!dprimary_default) {
       stop(
         "dprimary only applies to doubly interval-censored data (four ",
         "columns); x has two columns so no primary event window is ",
-        "modelled"
+        "modelled",
+        call. = FALSE
       )
     }
-    # Drop any row whose observed interval is not fully inside [L, D]. The
-    # interval-censored likelihood treats each row's window as an indivisible
-    # quantum, so a row that straddles a truncation boundary cannot be
-    # interpreted under the truncated model. Warning the caller and removing
-    # the row keeps the fit going while making the loss explicit; the caller
-    # can re-run after narrowing the offending intervals.
+    # Rows straddling [L, D] cannot be modelled, so drop them with a warning.
     if (is.finite(L) || is.finite(D)) {
       keep <- x$xl >= L & x$xr <= D
       if (!all(keep)) {
@@ -128,13 +123,15 @@ kerlikelihood <- function(x, family, L = -Inf, D = Inf,
           sum(!keep), " row(s) of x straddle or fall outside the truncation ",
           "bounds [L, D] and have been dropped. Each row's interval ",
           "[xl, xr] must satisfy xl >= L and xr <= D. To retain these ",
-          "observations, narrow their intervals before calling the fit."
+          "observations, narrow their intervals before calling the fit.",
+          call. = FALSE
         )
         x <- x[keep, , drop = FALSE]
         if (nrow(x) == 0L) {
           stop(
             "No rows of x remain after dropping observations incompatible ",
-            "with the truncation bounds [L, D]."
+            "with the truncation bounds [L, D].",
+            call. = FALSE
           )
         }
       }
@@ -143,14 +140,8 @@ kerlikelihood <- function(x, family, L = -Inf, D = Inf,
     xmax <- max(x$xr)
   } else if (nc == 4) {
     censtype <- "double"
-    # Drop rows whose secondary observation window is not fully inside
-    # [L, D]. The doubly-interval-censored likelihood passes the row's
-    # (lower, swindow) pair into primarycensored::dprimarycensored() with
-    # truncation bounds L and D; primarycensored requires the entire window
-    # to sit inside [L, D] and aborts otherwise. Rather than splitting a
-    # straddling window into a visible subset (which silently changes the
-    # observation), warn the caller and drop the row so the modelled and
-    # observed windows match.
+    # primarycensored needs each secondary window inside [L, D], so drop
+    # straddling rows with a warning.
     if (is.finite(L) || is.finite(D)) {
       lowers <- x$x2l - x$x1l
       uppers <- x$x2r - x$x1l
@@ -161,13 +152,15 @@ kerlikelihood <- function(x, family, L = -Inf, D = Inf,
           "bounds [L, D] and have been dropped. Each row's secondary window ",
           "must satisfy x2l - x1l >= L and x2r - x1l <= D. To retain these ",
           "observations, narrow their secondary windows before calling the ",
-          "fit."
+          "fit.",
+          call. = FALSE
         )
         x <- x[keep, , drop = FALSE]
         if (nrow(x) == 0L) {
           stop(
             "No rows of x remain after dropping observations incompatible ",
-            "with the truncation bounds [L, D]."
+            "with the truncation bounds [L, D].",
+            call. = FALSE
           )
         }
       }
@@ -176,9 +169,7 @@ kerlikelihood <- function(x, family, L = -Inf, D = Inf,
     xmin <- min(x$x2l - x$x1r)
     xmax <- max(x$x2r - x$x1l)
   }
-  # Helper: per-row log-contributions for the single-interval (nc == 2)
-  # branch, applying the truncation correction when L or D is finite.
-  # Reduces to log(Fr - Fl) in the default case.
+  # Per-row single interval-censored loglik, truncated to [L, D].
   single_interval_i <- function(Fl, Fr, FL, FD) {
     if (is.infinite(L) && is.infinite(D)) {
       return(log(Fr - Fl))
@@ -186,57 +177,68 @@ kerlikelihood <- function(x, family, L = -Inf, D = Inf,
     num <- pmin(Fr, FD) - pmax(Fl, FL)
     log(num) - log(FD - FL)
   }
-  # Shared pointwise loglik builder for the doubly interval-censored branch.
-  # Given a CDF and a function that extracts a named parameter list from
-  # `v`, returns a closure giving the per-row log-density from
-  # primarycensored::dprimarycensored(), in the row order of `x`. Rows are
-  # grouped by (pwindow, swindow) because dprimarycensored takes both as
-  # scalars and vectorises only over the lower bound x. The straddle-row
-  # drop in the nc==4 validation block above guarantees every surviving row
-  # sits fully inside [L, D], so the lower bound and swindow can be passed
-  # through without per-row adjustment. The user-supplied dprimary /
-  # dprimary_args are forwarded into primarycensored.
+  # Pointwise loglik for doubly interval-censored data via primarycensored.
+  # Rows are grouped by (pwindow, swindow) and evaluated at each group's
+  # unique lower bounds. The grouping is cached per x as optim reuses x.
   build_pc_logliki <- function(pdist, pars_fn) {
     force(pdist)
     force(pars_fn)
-    # Close over the primary event density so parfitml() and its bootstrap
-    # loop automatically re-use whatever dprimary the user passed in.
-    dprimary_local <- dprimary
-    dprimary_args_local <- dprimary_args
+    state <- new.env(parent = emptyenv())
+    prepare <- function(x) {
+      pwindows <- x$x1r - x$x1l
+      swindows <- x$x2r - x$x2l
+      lowers <- x$x2l - x$x1l
+      upw <- unique(pwindows)
+      usw <- unique(swindows)
+      key <- match(pwindows, upw) +
+        length(upw) * (match(swindows, usw) - 1L)
+      lapply(split(seq_along(key), key), function(r) {
+        lower <- lowers[r]
+        ulower <- unique(lower)
+        list(
+          rows = r, pwindow = pwindows[r[1]], swindow = swindows[r[1]],
+          lower = ulower, map = match(lower, ulower)
+        )
+      })
+    }
     function(v, x) {
       pars <- pars_fn(v)
-      pwindows <- x$x1r - x$x1l
-      lowers <- x$x2l - x$x1l
-      swindows <- x$x2r - x$x2l
-      groups <- split(
-        seq_along(lowers), list(pwindows, swindows), drop = TRUE
-      )
-      z <- numeric(length(lowers))
-      for (idx in groups) {
-        z[idx] <- do.call(
-          primarycensored::dprimarycensored,
+      if (!identical(x, state$x)) {
+        assign("prep", prepare(x), envir = state)
+        assign("x", x, envir = state)
+      }
+      if (is.null(state$pcens)) {
+        # Check pdist and dprimary once, then reuse the object.
+        do.call(primarycensored::check_pdist, c(list(pdist, D = D), pars))
+        for (g in state$prep) {
+          primarycensored::check_dprimary(dprimary, g$pwindow, dprimary_args)
+        }
+        obj <- do.call(
+          primarycensored::new_pcens,
           c(
             list(
-              x = lowers[idx], pdist = pdist,
-              pwindow = pwindows[idx[1]], swindow = swindows[idx[1]],
-              L = L, D = D,
-              dprimary = dprimary_local,
-              primary_args = dprimary_args_local,
-              log = TRUE
+              pdist = pdist, dprimary = dprimary,
+              primary_args = dprimary_args
             ),
             pars
           )
         )
+      } else {
+        obj <- do.call(stats::update, c(list(state$pcens), pars))
+      }
+      assign("pcens", obj, envir = state)
+      z <- numeric(nrow(x))
+      for (g in state$prep) {
+        z[g$rows] <- primarycensored::pcens_pmf(
+          obj, g$lower, g$pwindow,
+          swindow = g$swindow, L = L, D = D, log = TRUE
+        )[g$map]
       }
       z
     }
   }
-  if (family == "gaussian") {
-    # Gaussian uses the raw stats::pnorm CDF on the full real line. With the
-    # straddle-row drop above, primarycensored::dprimarycensored() sees only
-    # rows whose secondary window sits inside [L, D] and applies its own
-    # truncation correction via L and D.
-    if(nc == 2) {
+  if (family == "gaussian") { # nolint: if_switch_linter.
+    if (nc == 2) {
       logliki <- function(v, x) {
         par1 <- v[1]
         par2 <- exp(v[2])
@@ -246,7 +248,7 @@ kerlikelihood <- function(x, family, L = -Inf, D = Inf,
         FD  <- stats::pnorm(q = D, mean = par1, sd = par2)
         single_interval_i(Fl, Fr, FL, FD)
       }
-    } else if(nc == 4) {
+    } else if (nc == 4) {
       logliki <- build_pc_logliki(
         pdist = stats::pnorm,
         pars_fn = function(v) list(mean = v[1], sd = exp(v[2]))
@@ -262,12 +264,7 @@ kerlikelihood <- function(x, family, L = -Inf, D = Inf,
       return(o)
     }
   } else if (family == "skewnorm") {
-    # Skewnorm uses the package-level pskewnorm() CDF, which is internally
-    # clamped to [0, 1] and monotonised over the order of q. Owen's T can
-    # otherwise return values a hair outside [0, 1] in saturating regions
-    # that optim sometimes visits, and check_pdist() inside primarycensored
-    # would then abort the fit.
-    if(nc == 2) {
+    if (nc == 2) {
       logliki <- function(v, x) { # v: unbounded parameter
         par1 <- v[1]
         par2 <- exp(v[2])
@@ -278,12 +275,12 @@ kerlikelihood <- function(x, family, L = -Inf, D = Inf,
         FD <- pskewnorm(q = D, par1 = par1, par2 = par2, par3 = par3)
         single_interval_i(Fl, Fr, FL, FD)
       }
-    } else if(nc == 4) {
+    } else if (nc == 4) {
       logliki <- build_pc_logliki(
         pdist = pskewnorm,
-        pars_fn = function(v) list(
-          par1 = v[1], par2 = exp(v[2]), par3 = v[3]
-        )
+        pars_fn = function(v) {
+          list(par1 = v[1], par2 = exp(v[2]), par3 = v[3])
+        }
       )
     }
     originscale <- function(v) {
@@ -296,7 +293,7 @@ kerlikelihood <- function(x, family, L = -Inf, D = Inf,
       return(o)
     }
   } else if (family == "gamma") {
-    if(nc == 2) {
+    if (nc == 2) {
       logliki <- function(v, x) {
         par1 <- exp(v[1])
         par2 <- exp(v[2])
@@ -306,7 +303,7 @@ kerlikelihood <- function(x, family, L = -Inf, D = Inf,
         FD  <- stats::pgamma(q = D, shape = par1, rate = par2)
         single_interval_i(Fl, Fr, FL, FD)
       }
-    } else if(nc == 4) {
+    } else if (nc == 4) {
       logliki <- build_pc_logliki(
         pdist = stats::pgamma,
         pars_fn = function(v) list(shape = exp(v[1]), rate = exp(v[2]))
@@ -318,11 +315,11 @@ kerlikelihood <- function(x, family, L = -Inf, D = Inf,
       return(z)
     }
     J <- function(v) {
-      o <- diag(c(exp(v[1]), exp(v[2])))
+      o <- diag(exp(v[1:2]))
       return(o)
     }
   } else if (family == "lognormal") {
-    if(nc == 2) {
+    if (nc == 2) {
       logliki <- function(v, x) { # v: unbounded parameter
         par1 <- v[1]
         par2 <- exp(v[2])
@@ -332,7 +329,7 @@ kerlikelihood <- function(x, family, L = -Inf, D = Inf,
         FD  <- stats::plnorm(q = D, meanlog = par1, sdlog = par2)
         single_interval_i(Fl, Fr, FL, FD)
       }
-    } else if(nc == 4) {
+    } else if (nc == 4) {
       logliki <- build_pc_logliki(
         pdist = stats::plnorm,
         pars_fn = function(v) list(meanlog = v[1], sdlog = exp(v[2]))
@@ -348,7 +345,7 @@ kerlikelihood <- function(x, family, L = -Inf, D = Inf,
       return(o)
     }
   } else if (family == "weibull") {
-    if(nc == 2) {
+    if (nc == 2) {
       logliki <- function(v, x) { # v: unbounded parameter
         par1 <- exp(v[1])
         par2 <- exp(v[2])
@@ -358,7 +355,7 @@ kerlikelihood <- function(x, family, L = -Inf, D = Inf,
         FD  <- stats::pweibull(q = D, shape = par1, scale = par2)
         single_interval_i(Fl, Fr, FL, FD)
       }
-    } else if(nc == 4) {
+    } else if (nc == 4) {
       logliki <- build_pc_logliki(
         pdist = stats::pweibull,
         pars_fn = function(v) list(shape = exp(v[1]), scale = exp(v[2]))
@@ -370,7 +367,7 @@ kerlikelihood <- function(x, family, L = -Inf, D = Inf,
       return(z)
     }
     J <- function(v) {
-      o <- diag(c(exp(v[1]), exp(v[2])))
+      o <- diag(exp(v[1:2]))
       return(o)
     }
   }
