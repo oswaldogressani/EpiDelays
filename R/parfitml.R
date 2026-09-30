@@ -123,16 +123,12 @@ parfitml <- function(x, family, ci = c("npboot", "pboot", "sbnorm"),
     } else{
       Bboot <- 100
     }
-    if ("pgbar" %in% ...names()) {
-      if (isTRUE(list(...)$pgbar)) {
-        pgbar <- TRUE
-        cat(paste0("Fitting parametric model (", family, ") \n",
-                   "Bootstrap progress (Bboot=", Bboot, "): \n"))
-        progbar <- utils::txtProgressBar(min = 1, max = Bboot, initial = 1,
-                                         style = 3, char ="*")
-      }
-    } else{
-      pgbar <- FALSE
+    pgbar <- isTRUE(list(...)$pgbar)
+    if (pgbar) {
+      cat(paste0("Fitting parametric model (", family, ") \n",
+                 "Bootstrap progress (Bboot=", Bboot, "): \n"))
+      progbar <- utils::txtProgressBar(min = 1, max = Bboot, initial = 1,
+                                       style = 3, char ="*")
     }
     pboot <- matrix(0, nrow = Bboot, ncol = np)
     fboot <- matrix(0, nrow = Bboot, ncol = length(mlefeat))
