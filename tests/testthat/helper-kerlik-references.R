@@ -99,15 +99,15 @@ kerlik_analytical_G <- function(family, pars) {
 
 kerlik_analytical_reference <- function(x, family, pdist, pars) {
   G <- kerlik_analytical_G(family, pars)
-  I <- G(x$x2r - x$x1l) - G(x$x2r - x$x1r) -
+  integral <- G(x$x2r - x$x1l) - G(x$x2r - x$x1r) -
     G(x$x2l - x$x1l) + G(x$x2l - x$x1r)
-  for (i in which(I <= 0)) {
+  for (i in which(integral <= 0)) {
     h <- function(t1) {
       do.call(pdist, c(list(x$x2r[i] - t1), pars)) -
         do.call(pdist, c(list(x$x2l[i] - t1), pars))
     }
-    I[i] <- stats::integrate(h, lower = x$x1l[i], upper = x$x1r[i])$value
+    integral[i] <- stats::integrate(h, lower = x$x1l[i], upper = x$x1r[i])$value
   }
-  log(I) - log(x$x1r - x$x1l)
+  log(integral) - log(x$x1r - x$x1l)
 }
 # nolint end
