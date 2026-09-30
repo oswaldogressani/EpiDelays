@@ -192,47 +192,62 @@ kerlikelihood <- function(x, family, # nolint: cyclocomp_linter.
     num <- pmin(Fr, FD) - pmax(Fl, FL)
     log(num) - log(FD - FL)
   }
-  # Shared pointwise loglik builder for the doubly interval-censored branch.
-  # Given a CDF and a function that extracts a named parameter list from
-  # `v`, returns a closure giving the per-row log-density from
-  # primarycensored::dprimarycensored(), in the row order of `x`. Rows are
-  # grouped by (pwindow, swindow) because dprimarycensored takes both as
-  # scalars and vectorises only over the lower bound x. The straddle-row
-  # drop in the nc==4 validation block above guarantees every surviving row
-  # sits fully inside [L, D], so the lower bound and swindow can be passed
-  # through without per-row adjustment. The user-supplied dprimary /
-  # dprimary_args are forwarded into primarycensored.
+  # Pointwise loglik for doubly interval-censored data via primarycensored.
+  # Rows are grouped by (pwindow, swindow) and evaluated at each group's
+  # unique lower bounds. The grouping is cached per x as optim reuses x.
   build_pc_logliki <- function(pdist, pars_fn) {
     force(pdist)
     force(pars_fn)
-    # Close over the primary event density so parfitml() and its bootstrap
-    # loop automatically re-use whatever dprimary the user passed in.
-    dprimary_local <- dprimary
-    dprimary_args_local <- dprimary_args
+    state <- new.env(parent = emptyenv())
+    prepare <- function(x) {
+      pwindows <- x$x1r - x$x1l
+      swindows <- x$x2r - x$x2l
+      lowers <- x$x2l - x$x1l
+      upw <- unique(pwindows)
+      usw <- unique(swindows)
+      key <- match(pwindows, upw) +
+        length(upw) * (match(swindows, usw) - 1L)
+      lapply(split(seq_along(key), key), function(r) {
+        lower <- lowers[r]
+        ulower <- unique(lower)
+        list(
+          rows = r, pwindow = pwindows[r[1]], swindow = swindows[r[1]],
+          lower = ulower, map = match(lower, ulower)
+        )
+      })
+    }
     function(v, x) {
       pars <- pars_fn(v)
-      pwindows <- x$x1r - x$x1l
-      lowers <- x$x2l - x$x1l
-      swindows <- x$x2r - x$x2l
-      groups <- split(
-        seq_along(lowers), list(pwindows, swindows), drop = TRUE
-      )
-      z <- numeric(length(lowers))
-      for (idx in groups) {
-        z[idx] <- do.call(
-          primarycensored::dprimarycensored,
+      if (!identical(x, state$x)) {
+        assign("prep", prepare(x), envir = state)
+        assign("x", x, envir = state)
+      }
+      if (is.null(state$pcens)) {
+        # Check pdist and dprimary once, then reuse the object.
+        do.call(primarycensored::check_pdist, c(list(pdist, D = D), pars))
+        for (g in state$prep) {
+          primarycensored::check_dprimary(dprimary, g$pwindow, dprimary_args)
+        }
+        obj <- do.call(
+          primarycensored::new_pcens,
           c(
             list(
-              x = lowers[idx], pdist = pdist,
-              pwindow = pwindows[idx[1]], swindow = swindows[idx[1]],
-              L = L, D = D,
-              dprimary = dprimary_local,
-              primary_args = dprimary_args_local,
-              log = TRUE
+              pdist = pdist, dprimary = dprimary,
+              primary_args = dprimary_args
             ),
             pars
           )
         )
+      } else {
+        obj <- do.call(stats::update, c(list(state$pcens), pars))
+      }
+      assign("pcens", obj, envir = state)
+      z <- numeric(nrow(x))
+      for (g in state$prep) {
+        z[g$rows] <- primarycensored::pcens_pmf(
+          obj, g$lower, g$pwindow,
+          swindow = g$swindow, L = L, D = D, log = TRUE
+        )[g$map]
       }
       z
     }
