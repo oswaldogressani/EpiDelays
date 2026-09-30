@@ -68,11 +68,11 @@ summary.parfitml <- function(object, ndigits = 3, type = "full", ...) {
       arg_bits <- paste0(
         names(object$dprimary_args), " = ",
         vapply(object$dprimary_args, function(a) {
-          paste(format(a), collapse = ", ")
+          toString(format(a))
         }, character(1))
       )
       dprimary_label <- paste0(
-        fn_name, " (", paste(arg_bits, collapse = ", "), ")"
+        fn_name, " (", toString(arg_bits), ")"
       )
     } else {
       dprimary_label <- fn_name
