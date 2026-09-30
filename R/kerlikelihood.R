@@ -68,51 +68,53 @@
 #'
 #' @keywords internal
 
-kerlikelihood <- function(x, family, L = -Inf, D = Inf,
+kerlikelihood <- function(x, family, # nolint: cyclocomp_linter.
+                          L = -Inf, D = Inf,
                           dprimary = stats::dunif,
                           dprimary_args = list()) {
   # Truncation bound validation mirrors
   # primarycensored::.check_truncation_bounds.
   if (!is.numeric(L) || length(L) != 1L || is.na(L)) {
-    stop("L must be a numeric scalar.")
+    stop("L must be a numeric scalar.", call. = FALSE)
   }
   if (!is.numeric(D) || length(D) != 1L || is.na(D) || L >= D) {
-    stop("L must be less than D.")
+    stop("L must be less than D.", call. = FALSE)
   }
-  if(!is.function(dprimary)) {
-    stop("dprimary must be a function")
+  if (!is.function(dprimary)) {
+    stop("dprimary must be a function", call. = FALSE)
   }
-  if(!is.list(dprimary_args) ||
+  if (!is.list(dprimary_args) ||
      (length(dprimary_args) > 0 && is.null(names(dprimary_args)))) {
-    stop("dprimary_args must be a named list")
+    stop("dprimary_args must be a named list", call. = FALSE)
   }
   dprimary_default <- identical(dprimary, stats::dunif) &&
     length(dprimary_args) == 0
   # Input checks
   dfck <- kerdata_check(x = x) # data frame check
     if (dfck$result == "fail") {
-      stop(dfck$message)
+      stop(dfck$message, call. = FALSE)
     }
   famck <- kerfamily_check(x = family) # family check
     if (famck$result == "fail") {
-      stop(famck$message)
+      stop(famck$message, call. = FALSE)
     }
   domck <- kerdomain_check(x = x, family = family) # Domain check
   if (domck$result == "fail") {
-    stop(domck$message)
+    stop(domck$message, call. = FALSE)
   }
   fset <- kerfamilies()
   fnames <- sapply(fset, "[[", "fname")
   famdesc <- fset[[match(family, fnames)]]
   nc <- ncol(x)
-  if(nc == 2) {
+  if (nc == 2) {
     censtype <- "single"
     # Non-uniform primary has no meaning without a primary event window.
-    if(!dprimary_default) {
+    if (!dprimary_default) {
       stop(
         "dprimary only applies to doubly interval-censored data (four ",
         "columns); x has two columns so no primary event window is ",
-        "modelled"
+        "modelled",
+        call. = FALSE
       )
     }
     # Drop any row whose observed interval is not fully inside [L, D]. The
@@ -128,13 +130,15 @@ kerlikelihood <- function(x, family, L = -Inf, D = Inf,
           sum(!keep), " row(s) of x straddle or fall outside the truncation ",
           "bounds [L, D] and have been dropped. Each row's interval ",
           "[xl, xr] must satisfy xl >= L and xr <= D. To retain these ",
-          "observations, narrow their intervals before calling the fit."
+          "observations, narrow their intervals before calling the fit.",
+          call. = FALSE
         )
         x <- x[keep, , drop = FALSE]
         if (nrow(x) == 0L) {
           stop(
             "No rows of x remain after dropping observations incompatible ",
-            "with the truncation bounds [L, D]."
+            "with the truncation bounds [L, D].",
+            call. = FALSE
           )
         }
       }
@@ -161,13 +165,15 @@ kerlikelihood <- function(x, family, L = -Inf, D = Inf,
           "bounds [L, D] and have been dropped. Each row's secondary window ",
           "must satisfy x2l - x1l >= L and x2r - x1l <= D. To retain these ",
           "observations, narrow their secondary windows before calling the ",
-          "fit."
+          "fit.",
+          call. = FALSE
         )
         x <- x[keep, , drop = FALSE]
         if (nrow(x) == 0L) {
           stop(
             "No rows of x remain after dropping observations incompatible ",
-            "with the truncation bounds [L, D]."
+            "with the truncation bounds [L, D].",
+            call. = FALSE
           )
         }
       }
@@ -231,12 +237,12 @@ kerlikelihood <- function(x, family, L = -Inf, D = Inf,
       z
     }
   }
-  if (family == "gaussian") {
+  if (family == "gaussian") { # nolint: if_switch_linter.
     # Gaussian uses the raw stats::pnorm CDF on the full real line. With the
     # straddle-row drop above, primarycensored::dprimarycensored() sees only
     # rows whose secondary window sits inside [L, D] and applies its own
     # truncation correction via L and D.
-    if(nc == 2) {
+    if (nc == 2) {
       logliki <- function(v, x) {
         par1 <- v[1]
         par2 <- exp(v[2])
@@ -246,7 +252,7 @@ kerlikelihood <- function(x, family, L = -Inf, D = Inf,
         FD  <- stats::pnorm(q = D, mean = par1, sd = par2)
         single_interval_i(Fl, Fr, FL, FD)
       }
-    } else if(nc == 4) {
+    } else if (nc == 4) {
       logliki <- build_pc_logliki(
         pdist = stats::pnorm,
         pars_fn = function(v) list(mean = v[1], sd = exp(v[2]))
@@ -267,7 +273,7 @@ kerlikelihood <- function(x, family, L = -Inf, D = Inf,
     # otherwise return values a hair outside [0, 1] in saturating regions
     # that optim sometimes visits, and check_pdist() inside primarycensored
     # would then abort the fit.
-    if(nc == 2) {
+    if (nc == 2) {
       logliki <- function(v, x) { # v: unbounded parameter
         par1 <- v[1]
         par2 <- exp(v[2])
@@ -278,12 +284,12 @@ kerlikelihood <- function(x, family, L = -Inf, D = Inf,
         FD <- pskewnorm(q = D, par1 = par1, par2 = par2, par3 = par3)
         single_interval_i(Fl, Fr, FL, FD)
       }
-    } else if(nc == 4) {
+    } else if (nc == 4) {
       logliki <- build_pc_logliki(
         pdist = pskewnorm,
-        pars_fn = function(v) list(
-          par1 = v[1], par2 = exp(v[2]), par3 = v[3]
-        )
+        pars_fn = function(v) {
+          list(par1 = v[1], par2 = exp(v[2]), par3 = v[3])
+        }
       )
     }
     originscale <- function(v) {
@@ -296,7 +302,7 @@ kerlikelihood <- function(x, family, L = -Inf, D = Inf,
       return(o)
     }
   } else if (family == "gamma") {
-    if(nc == 2) {
+    if (nc == 2) {
       logliki <- function(v, x) {
         par1 <- exp(v[1])
         par2 <- exp(v[2])
@@ -306,7 +312,7 @@ kerlikelihood <- function(x, family, L = -Inf, D = Inf,
         FD  <- stats::pgamma(q = D, shape = par1, rate = par2)
         single_interval_i(Fl, Fr, FL, FD)
       }
-    } else if(nc == 4) {
+    } else if (nc == 4) {
       logliki <- build_pc_logliki(
         pdist = stats::pgamma,
         pars_fn = function(v) list(shape = exp(v[1]), rate = exp(v[2]))
@@ -318,11 +324,11 @@ kerlikelihood <- function(x, family, L = -Inf, D = Inf,
       return(z)
     }
     J <- function(v) {
-      o <- diag(c(exp(v[1]), exp(v[2])))
+      o <- diag(exp(v[1:2]))
       return(o)
     }
   } else if (family == "lognormal") {
-    if(nc == 2) {
+    if (nc == 2) {
       logliki <- function(v, x) { # v: unbounded parameter
         par1 <- v[1]
         par2 <- exp(v[2])
@@ -332,7 +338,7 @@ kerlikelihood <- function(x, family, L = -Inf, D = Inf,
         FD  <- stats::plnorm(q = D, meanlog = par1, sdlog = par2)
         single_interval_i(Fl, Fr, FL, FD)
       }
-    } else if(nc == 4) {
+    } else if (nc == 4) {
       logliki <- build_pc_logliki(
         pdist = stats::plnorm,
         pars_fn = function(v) list(meanlog = v[1], sdlog = exp(v[2]))
@@ -348,7 +354,7 @@ kerlikelihood <- function(x, family, L = -Inf, D = Inf,
       return(o)
     }
   } else if (family == "weibull") {
-    if(nc == 2) {
+    if (nc == 2) {
       logliki <- function(v, x) { # v: unbounded parameter
         par1 <- exp(v[1])
         par2 <- exp(v[2])
@@ -358,7 +364,7 @@ kerlikelihood <- function(x, family, L = -Inf, D = Inf,
         FD  <- stats::pweibull(q = D, shape = par1, scale = par2)
         single_interval_i(Fl, Fr, FL, FD)
       }
-    } else if(nc == 4) {
+    } else if (nc == 4) {
       logliki <- build_pc_logliki(
         pdist = stats::pweibull,
         pars_fn = function(v) list(shape = exp(v[1]), scale = exp(v[2]))
@@ -370,7 +376,7 @@ kerlikelihood <- function(x, family, L = -Inf, D = Inf,
       return(z)
     }
     J <- function(v) {
-      o <- diag(c(exp(v[1]), exp(v[2])))
+      o <- diag(exp(v[1:2]))
       return(o)
     }
   }
