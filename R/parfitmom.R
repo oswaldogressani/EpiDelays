@@ -51,6 +51,7 @@
 #'
 #' @export
 
+# nolint start: cyclocomp_linter.
 parfitmom <- function(x, family, incheck = TRUE, L = -Inf, D = Inf,
                       dprimary = stats::dunif, dprimary_args = list()) {
   # L and D are accepted so parfitml() can forward them, but the moment
@@ -95,7 +96,7 @@ parfitmom <- function(x, family, incheck = TRUE, L = -Inf, D = Inf,
   m1 <- mean(y) # First sample moment
   m2 <- (1 / n) * sum((y - m1)^2) # Second sample central moment
   m3 <- (1 / n) * sum((y - m1)^3) # Third sample central moment
-  if (family == "gaussian") {
+  if (family == "gaussian") { # nolint: if_switch_linter.
     par1approx <- m1
     par2approx <- sqrt(m2)
     mompoint_ub <- c(par1approx, log(par2approx))
@@ -173,3 +174,4 @@ parfitmom <- function(x, family, incheck = TRUE, L = -Inf, D = Inf,
   o <- c(famdesc, lpout)
   return(o)
 }
+# nolint end

@@ -14,6 +14,7 @@
 #'
 #' @export
 
+# nolint start: cyclocomp_linter.
 summary.parfitml <- function(object, ndigits = 3, type = "full", ...) {
   if (!inherits(object, "parfitml")) {
     stop("object must be a parfitml object", call. = FALSE)
@@ -83,7 +84,7 @@ summary.parfitml <- function(object, ndigits = 3, type = "full", ...) {
   has_trunc <- isTRUE(is.finite(object$L)) ||
     (!is.null(object$D) && is.finite(object$D))
   cimethod <- object$cimethod
-  if (cimethod == "npboot") {
+  if (cimethod == "npboot") { # nolint: if_switch_linter.
     cidesc <- "Nonparametric bootstrap"
   } else if (cimethod == "pboot") {
     cidesc <- "Parametric bootstrap"
@@ -153,3 +154,4 @@ summary.parfitml <- function(object, ndigits = 3, type = "full", ...) {
     cat("------------------------------------------------------------- \n")
   }
 }
+# nolint end

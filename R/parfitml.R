@@ -77,6 +77,7 @@
 #'
 #' @export
 
+# nolint start: cyclocomp_linter.
 parfitml <- function(x, family, ci = c("npboot", "pboot", "sbnorm"),
                      L = -Inf, D = Inf,
                      dprimary = stats::dunif, dprimary_args = list(), ...) {
@@ -225,3 +226,4 @@ parfitml <- function(x, family, ci = c("npboot", "pboot", "sbnorm"),
   attr(o, "class") <- "parfitml"
   return(o)
 }
+# nolint end
