@@ -1,16 +1,5 @@
-# Test-local reference oracles for kerlikelihood() equivalence tests.
-#
-# kerlikelihood()'s doubly-interval-censored ni branch is implemented on top
-# of primarycensored::dprimarycensored(). The two oracles below reconstruct
-# the same inner integral in two independent ways so the equivalence tests
-# pin both the dprimarycensored idiom and the underlying integrate()-based
-# definition of the inner expectation:
-#
-#   inner_i = (1 / (x1r - x1l)) *
-#     int_{x1l}^{x1r} [F(x2r - t1) - F(x2l - t1)] dt1
-#
-# Both oracles are CDF-agnostic: the same family_cases entry drives them,
-# keyed on whatever pdist is passed in.
+# Reference implementations of the doubly interval-censored likelihood:
+#   (1 / (x1r - x1l)) * int_{x1l}^{x1r} [F(x2r - t) - F(x2l - t)] dt
 
 # nolint start: object_length_linter, line_length_linter.
 kerlik_integrate_reference <- function(x, pdist, pars) {
@@ -29,8 +18,6 @@ kerlik_integrate_reference <- function(x, pdist, pars) {
   z
 }
 
-# Idiomatic primarycensored oracle. CDF-agnostic: whatever pdist and pars
-# are supplied feed straight into dprimarycensored().
 kerlik_loglik_via_dprimarycensored <- function(x, pdist, pars) {
   sum(vapply(seq_len(nrow(x)), function(i) {
     do.call(
@@ -50,12 +37,8 @@ kerlik_loglik_via_dprimarycensored <- function(x, pdist, pars) {
 }
 # nolint end
 
-# Closed-form reference for the uniform-primary inner integral, following
-# the antiderivative approach in upstream EpiDelays (oswaldogressani,
-# commit 0f33ae7). With G(u) = int_0^u F(s) ds, the per-row integral is
-#   G(x2r - x1l) - G(x2r - x1r) - G(x2l - x1l) + G(x2l - x1r).
-# Rows where cancellation leaves a non-positive value fall back to
-# integrate(), as upstream does. Returns per-row log contributions.
+# Closed form from upstream EpiDelays (0f33ae7), with G(u) = int_0^u F(s) ds.
+# Falls back to integrate() where cancellation gives a non-positive value.
 # nolint start: object_length_linter, line_length_linter.
 kerlik_analytical_G <- function(family, pars) {
   switch(family,

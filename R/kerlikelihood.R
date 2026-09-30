@@ -72,8 +72,6 @@ kerlikelihood <- function(x, family, # nolint: cyclocomp_linter.
                           L = -Inf, D = Inf,
                           dprimary = stats::dunif,
                           dprimary_args = list()) {
-  # Truncation bound validation mirrors
-  # primarycensored::.check_truncation_bounds.
   if (!is.numeric(L) || length(L) != 1L || is.na(L)) {
     stop("L must be a numeric scalar.", call. = FALSE)
   }
@@ -117,12 +115,7 @@ kerlikelihood <- function(x, family, # nolint: cyclocomp_linter.
         call. = FALSE
       )
     }
-    # Drop any row whose observed interval is not fully inside [L, D]. The
-    # interval-censored likelihood treats each row's window as an indivisible
-    # quantum, so a row that straddles a truncation boundary cannot be
-    # interpreted under the truncated model. Warning the caller and removing
-    # the row keeps the fit going while making the loss explicit; the caller
-    # can re-run after narrowing the offending intervals.
+    # Rows straddling [L, D] cannot be modelled, so drop them with a warning.
     if (is.finite(L) || is.finite(D)) {
       keep <- x$xl >= L & x$xr <= D
       if (!all(keep)) {
@@ -147,14 +140,8 @@ kerlikelihood <- function(x, family, # nolint: cyclocomp_linter.
     xmax <- max(x$xr)
   } else if (nc == 4) {
     censtype <- "double"
-    # Drop rows whose secondary observation window is not fully inside
-    # [L, D]. The doubly-interval-censored likelihood passes the row's
-    # (lower, swindow) pair into primarycensored::dprimarycensored() with
-    # truncation bounds L and D; primarycensored requires the entire window
-    # to sit inside [L, D] and aborts otherwise. Rather than splitting a
-    # straddling window into a visible subset (which silently changes the
-    # observation), warn the caller and drop the row so the modelled and
-    # observed windows match.
+    # primarycensored needs each secondary window inside [L, D], so drop
+    # straddling rows with a warning.
     if (is.finite(L) || is.finite(D)) {
       lowers <- x$x2l - x$x1l
       uppers <- x$x2r - x$x1l
@@ -182,9 +169,7 @@ kerlikelihood <- function(x, family, # nolint: cyclocomp_linter.
     xmin <- min(x$x2l - x$x1r)
     xmax <- max(x$x2r - x$x1l)
   }
-  # Helper: per-row log-contributions for the single-interval (nc == 2)
-  # branch, applying the truncation correction when L or D is finite.
-  # Reduces to log(Fr - Fl) in the default case.
+  # Per-row single interval-censored loglik, truncated to [L, D].
   single_interval_i <- function(Fl, Fr, FL, FD) {
     if (is.infinite(L) && is.infinite(D)) {
       return(log(Fr - Fl))
@@ -253,10 +238,6 @@ kerlikelihood <- function(x, family, # nolint: cyclocomp_linter.
     }
   }
   if (family == "gaussian") { # nolint: if_switch_linter.
-    # Gaussian uses the raw stats::pnorm CDF on the full real line. With the
-    # straddle-row drop above, primarycensored::dprimarycensored() sees only
-    # rows whose secondary window sits inside [L, D] and applies its own
-    # truncation correction via L and D.
     if (nc == 2) {
       logliki <- function(v, x) {
         par1 <- v[1]
@@ -283,11 +264,6 @@ kerlikelihood <- function(x, family, # nolint: cyclocomp_linter.
       return(o)
     }
   } else if (family == "skewnorm") {
-    # Skewnorm uses the package-level pskewnorm() CDF, which is internally
-    # clamped to [0, 1] and monotonised over the order of q. Owen's T can
-    # otherwise return values a hair outside [0, 1] in saturating regions
-    # that optim sometimes visits, and check_pdist() inside primarycensored
-    # would then abort the fit.
     if (nc == 2) {
       logliki <- function(v, x) { # v: unbounded parameter
         par1 <- v[1]

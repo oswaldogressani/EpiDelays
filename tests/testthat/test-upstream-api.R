@@ -1,6 +1,4 @@
-# Tests that the upstream EpiDelays API (pointwise logliki, Jacobian J,
-# xmin / xmax, ci = "sbnorm" and plot methods) composes with the
-# primarycensored backend, truncation and non-uniform primary events.
+# Upstream API (logliki, J, xmin/xmax, sbnorm, plot) with our backend.
 
 api_cases <- list(
   gaussian = list(v = c(1.5, log(0.8))),
@@ -10,8 +8,7 @@ api_cases <- list(
   skewnorm = list(v = c(1, log(1), 2))
 )
 
-# Rows with two distinct primary windows interleaved, so the grouped
-# dprimarycensored calls must write results back in the original row order.
+# Interleaved primary windows, to check results keep row order.
 mixed_window_data <- function() {
   data.frame(
     x1l = c(0, 1, 2, 3, 4, 5),
@@ -37,7 +34,6 @@ for (fam in names(api_cases)) {
       li <- m$logliki(v, x)
       expect_length(li, nrow(x))
       expect_identical(sum(li), m$loglik(v, x))
-      # Each row on its own must give the same contribution.
       by_row <- vapply(seq_len(nrow(x)), function(i) {
         m$loglik(v, x[i, , drop = FALSE])
       }, numeric(1))
@@ -133,8 +129,7 @@ test_that("pskewnorm takes q and stays a valid CDF when saturated", {
 
 test_that("logliki gives fresh results when x changes between calls", {
   skip_if_no_primarycensored()
-  # optim reuses one x, but the bootstrap passes resampled frames to the
-  # same closure, so any per-x preparation must not leak between frames.
+  # The bootstrap passes resampled frames to the same closure.
   x <- mixed_window_data()
   m <- kerlikelihood(x = x, family = "gamma")
   v <- log(c(2, 0.5))
