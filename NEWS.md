@@ -26,3 +26,4 @@
 * S3 methods (plot) for parfitml and nonparfit.
 * Simplified kerlikelihood function and added logliki pointwise contributions.
 * Added analytical evaluations for doubly interval-censored kerlikelihood.
+* Corrected pgbar error arising when passing pgbar = FALSE

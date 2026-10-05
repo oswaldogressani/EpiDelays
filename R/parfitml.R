@@ -34,8 +34,7 @@
 #' family. Can be one of the following: \code{"gaussian"}, \code{"gamma"},
 #' \code{"lognormal"}, \code{"weibull"}, or \code{"skewnorm"}.
 #' @param ci The engine for computing confidence intervals. Default is
-#' \code{"npboot"} for nonparametric bootstrap. Other options are \code{"pboot"}
-#' for the parametric bootstrap (currently under construction) or \code{"sbnorm"}
+#' \code{"npboot"} for nonparametric bootstrap. Another option is \code{"sbnorm"}
 #' which relies on a simulation-based approach to compute confidence intervals
 #' using asymptotic normality of the MLE estimator following Mandel (2013).
 #' @param ... Further arguments. Specifying e.g. \code{Bboot = 1000} permits
@@ -61,7 +60,7 @@
 #'
 #' @export
 
-parfitml <- function(x, family, ci = c("npboot", "pboot", "sbnorm"),...){
+parfitml <- function(x, family, ci = c("npboot", "sbnorm"),...){
   tic <- proc.time()
   m <- kerlikelihood(x = x, family = family)
   n <- nrow(x)
@@ -86,17 +85,13 @@ parfitml <- function(x, family, ci = c("npboot", "pboot", "sbnorm"),...){
     } else{
       Bboot <- 100
     }
-    if ("pgbar" %in% ...names()) {
-      if (isTRUE(list(...)$pgbar)) {
-        pgbar <- TRUE
+    pgbar <- isTRUE(list(...)$pgbar)
+      if (pgbar) {
         cat(paste0("Fitting parametric model (", family, ") \n",
                    "Bootstrap progress (Bboot=", Bboot, "): \n"))
         progbar <- utils::txtProgressBar(min = 1, max = Bboot, initial = 1,
                                          style = 3, char ="*")
       }
-    } else{
-      pgbar <- FALSE
-    }
     pboot <- matrix(0, nrow = Bboot, ncol = np)
     fboot <- matrix(0, nrow = Bboot, ncol = length(mlefeat))
     bootdiscard <- 0

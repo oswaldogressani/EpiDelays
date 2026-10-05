@@ -5,7 +5,7 @@
 \title{Parametric estimation with maximum likelihood for single or doubly
 interval-censored data}
 \usage{
-parfitml(x, family, ci = c("npboot", "pboot", "sbnorm"), ...)
+parfitml(x, family, ci = c("npboot", "sbnorm"), ...)
 }
 \arguments{
 \item{x}{A data frame with either two columns named \code{xl} and \code{xr},
@@ -17,8 +17,7 @@ family. Can be one of the following: \code{"gaussian"}, \code{"gamma"},
 \code{"lognormal"}, \code{"weibull"}, or \code{"skewnorm"}.}
 
 \item{ci}{The engine for computing confidence intervals. Default is
-\code{"npboot"} for nonparametric bootstrap. Other options are \code{"pboot"}
-for the parametric bootstrap (currently under construction) or \code{"sbnorm"}
+\code{"npboot"} for nonparametric bootstrap. Another option is \code{"sbnorm"}
 which relies on a simulation-based approach to compute confidence intervals
 using asymptotic normality of the MLE estimator following Mandel (2013).}
 
