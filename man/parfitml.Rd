@@ -5,7 +5,7 @@
 \title{Parametric estimation with maximum likelihood for single or doubly
 interval-censored data}
 \usage{
-parfitml(x, family, ci = c("npboot", "sbnorm"), ...)
+parfitml(x, family, ci = c("npboot", "sbnorm"), p = NULL, ...)
 }
 \arguments{
 \item{x}{A data frame with either two columns named \code{xl} and \code{xr},
@@ -20,6 +20,10 @@ family. Can be one of the following: \code{"gaussian"}, \code{"gamma"},
 \code{"npboot"} for nonparametric bootstrap. Another option is \code{"sbnorm"}
 which relies on a simulation-based approach to compute confidence intervals
 using asymptotic normality of the MLE estimator following Mandel (2013).}
+
+\item{p}{A vector of probabilities. An associated quantile estimate will be
+computed for each entry of p based on the fitted epidemiological delay
+distribution. By default p = c(0.01, 0.05, 0.25, 0.50, 0.75, 0.95, 0.99).}
 
 \item{...}{Further arguments. Specifying e.g. \code{Bboot = 1000} permits
 to fix the bootstrap sample size to 1000 (the default is 100 here). Likewise

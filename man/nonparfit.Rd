@@ -4,7 +4,7 @@
 \alias{nonparfit}
 \title{Nonparametric estimation for single interval-censored data based on uniform mixtures}
 \usage{
-nonparfit(x, Bboot = 1000, pgbar = TRUE)
+nonparfit(x, Bboot = 1000, p = NULL, pgbar = TRUE)
 }
 \arguments{
 \item{x}{A data frame with n rows and two columns indicating the left and
@@ -12,6 +12,10 @@ right bound, respectively, of the interval-censored observations. \code{NA}
 values are not allowed.}
 
 \item{Bboot}{Number of bootstrap samples. Default is 1000.}
+
+\item{p}{A vector of probabilities. An associated quantile estimate will be
+computed for each entry of p based on the fitted epidemiological delay
+distribution. By default p = c(0.01, 0.05, 0.25, 0.50, 0.75, 0.95, 0.99).}
 
 \item{pgbar}{Should a progress bar be displayed in console? Default is TRUE.}
 }

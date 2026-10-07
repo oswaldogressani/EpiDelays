@@ -4,15 +4,17 @@
 \alias{kerfeats}
 \title{Computes features for a given parametric family}
 \usage{
-kerfeats(family, par)
+kerfeats(par, family, p)
 }
 \arguments{
+\item{par}{A vector of parameter values.}
+
 \item{family}{A characther string specifying the parametric family.}
 
-\item{par}{A vector of parameter values.}
+\item{p}{A vector of probabilities.}
 }
 \value{
-A data frame of features.
+A numeric vector of features.
 }
 \description{
 Computes the mean, variance, standard deviation and different quantiles

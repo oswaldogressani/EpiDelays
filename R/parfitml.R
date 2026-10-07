@@ -37,6 +37,9 @@
 #' \code{"npboot"} for nonparametric bootstrap. Another option is \code{"sbnorm"}
 #' which relies on a simulation-based approach to compute confidence intervals
 #' using asymptotic normality of the MLE estimator following Mandel (2013).
+#' @param p A vector of probabilities. An associated quantile estimate will be
+#' computed for each entry of p based on the fitted epidemiological delay
+#' distribution. By default p = c(0.01, 0.05, 0.25, 0.50, 0.75, 0.95, 0.99).
 #' @param ... Further arguments. Specifying e.g. \code{Bboot = 1000} permits
 #' to fix the bootstrap sample size to 1000 (the default is 100 here). Likewise
 #' specifying \code{ns = 1000} permits to fix the number of simulated samples
@@ -60,8 +63,15 @@
 #'
 #' @export
 
-parfitml <- function(x, family, ci = c("npboot", "sbnorm"),...){
+parfitml <- function(x, family, ci = c("npboot", "sbnorm"), p = NULL, ...){
   tic <- proc.time()
+  if(is.null(p)) {
+    p <- c(0.01, 0.05, 0.25, 0.50, 0.75, 0.95, 0.99)
+  } else{
+    if (!is.numeric(p) || length(p) < 1 || anyNA(p) || any(p <= 0 | p >= 1)) {
+      stop("p must be a numeric vector with entries strictly between 0 and 1")
+    }
+  }
   m <- kerlikelihood(x = x, family = family)
   n <- nrow(x)
   np <- m$npars
@@ -70,11 +80,11 @@ parfitml <- function(x, family, ci = c("npboot", "sbnorm"),...){
   mle <- stats::optim(par = v0, fn = m$loglik, x = x, control = maxs,
                       hessian = TRUE)
   mlepar <- as.numeric(m$originscale(mle$par))
-  mlefeat <- as.numeric(kerfeats(family = family, par = mlepar))
+  mlefeat <- kerfeats(family = family, par = mlepar, p = p)
   mleconv <- (mle$convergence == 0)
   cimethod <- match.arg(ci)
   parl <- stats::setNames(vector("list", np), paste0("par", 1:np))
-  feats <- c("mean", "var", "sd", paste0("q", c(1, 5, 25, 50, 75, 95, 99)))
+  feats <- c("mean", "var", "sd", paste0("q", (100 * p)))
   featsl <- stats::setNames(vector("list", length(feats)), feats)
   if(cimethod == "npboot"){
     if ("Bboot" %in% ...names()) {
@@ -109,7 +119,7 @@ parfitml <- function(x, family, ci = c("npboot", "sbnorm"),...){
       }
       mleparboot <- as.numeric(m$originscale(mleboot$par))
       pboot[b,] <- mleparboot
-      fboot[b, ] <- as.numeric(kerfeats(family = family, par = mleparboot))
+      fboot[b, ] <- kerfeats(family = family, par = mleparboot, p = p)
       if(isTRUE(pgbar)){
         utils::setTxtProgressBar(progbar, b)
       }
@@ -117,10 +127,8 @@ parfitml <- function(x, family, ci = c("npboot", "sbnorm"),...){
     if(isTRUE(pgbar)){
       close(progbar)
     }
-    parfit <- kerstats(slist = parl, pestim = mlepar, method = "boot",
-                       boot = pboot)
-    delayfit <- kerstats(slist = featsl, pestim = mlefeat, method = "boot",
-                         boot = fboot)
+    parfit <- kerstats_boot(parl, mlepar, pboot)
+    delayfit <- kerstats_boot(featsl, mlefeat, boot = fboot)
     ns <- NULL
   } else if(cimethod == "sbnorm"){
     if ("ns" %in% ...names()) {
@@ -139,12 +147,12 @@ parfitml <- function(x, family, ci = c("npboot", "sbnorm"),...){
     psim <- rmvnorm(n = ns, mean = mlepar, sigma = sigmamle)$sim
     err2feats <- list()
     for(j in 1:ns) {
-      err2feats[[j]] <- (kerfeats(family = family, par = psim[j, ]) - mlefeat)^2
+      err2feats[[j]] <- (kerfeats(family = family, par = psim[j, ], p = p) - mlefeat)^2
       cat(sprintf("\r Simulation-based ci: %d/%d.", j, ns))
     }
     sefeats <- sqrt(colMeans(do.call(rbind, err2feats)))
-    parfit <- kerstats(parl, mlepar, method = "norm", se = semle)
-    delayfit <- kerstats(featsl, mlefeat, method = "norm", se = sefeats)
+    parfit <- kerstats_norm(parl, mlepar, semle)
+    delayfit <- kerstats_norm(featsl, mlefeat, sefeats)
     Bboot <- NULL
     bootdiscard <- NULL
   }
