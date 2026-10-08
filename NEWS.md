@@ -26,7 +26,9 @@
 * S3 methods (plot) for parfitml and nonparfit.
 * Simplified kerlikelihood function and added logliki pointwise contributions.
 * Added analytical evaluations for doubly interval-censored kerlikelihood.
-* Corrected pgbar error arising when passing pgbar = FALSE
-* Decomposed kerstats in two subroutines (kerstats_boot and kerstats_norm)
-* Added option p = NULL to parfitml and nonparfit for user-defined quantiles
-* Updated kerfeats to return numeric vector instead of data frame
+* Corrected pgbar error arising when passing pgbar = FALSE.
+* Decomposed kerstats in two subroutines (kerstats_boot and kerstats_norm).
+* Added option p = NULL to parfitml and nonparfit for user-defined quantiles.
+* Updated kerfeats to return numeric vector instead of data frame.
+* Version name: "Parametric wave 2".
+* Release date: 2026-10-08 (October 8, 2026)

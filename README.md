@@ -36,7 +36,7 @@ will be added in future releases.
 #### Package version
 
 This is version 0.0.3 - “Parametric wave 2”.<br> Release date:
-2026-10-07 (October 7, 2026).
+2026-10-08 (October 8, 2026).
 
 #### Authors and contributors
 
